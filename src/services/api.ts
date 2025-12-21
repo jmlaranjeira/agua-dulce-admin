@@ -80,10 +80,12 @@ export const api = {
   },
 
   orders: {
-    list: (filters?: { status?: OrderStatus; customerId?: string }) => {
+    list: (filters?: { status?: OrderStatus; customerId?: string; from?: Date; to?: Date }) => {
       const params = new URLSearchParams()
       if (filters?.status) params.set('status', filters.status)
       if (filters?.customerId) params.set('customerId', filters.customerId)
+      if (filters?.from) params.set('from', filters.from.toISOString())
+      if (filters?.to) params.set('to', filters.to.toISOString())
       const query = params.toString()
       return request<Order[]>(`/orders${query ? `?${query}` : ''}`)
     },
