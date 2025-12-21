@@ -60,6 +60,13 @@ export const labels = {
     savedSuccess: 'Proveedor guardado correctamente',
     deletedSuccess: 'Proveedor eliminado correctamente',
   },
+  customers: {
+    newCustomer: 'Nuevo cliente',
+    noCustomers: 'No hay clientes registrados',
+    savedSuccess: 'Cliente guardado correctamente',
+    ordersSection: 'Pedidos de este cliente',
+    noOrders: 'Este cliente no tiene pedidos',
+  },
   products: {
     newProduct: 'Nuevo producto',
     noProducts: 'No hay productos registrados',
