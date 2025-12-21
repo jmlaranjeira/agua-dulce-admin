@@ -66,11 +66,25 @@ export type Product = {
   updatedAt: string
 }
 
+export type CustomerAddress = {
+  id: string
+  label: string
+  street: string
+  city: string
+  postalCode: string
+  province: string
+  country: string | null
+  notes: string | null
+  isDefault: boolean
+  customerId: string
+}
+
 export type Customer = {
   id: string
   phone: string
   name: string
   notes: string | null
+  addresses?: CustomerAddress[]
   createdAt: string
 }
 
@@ -88,6 +102,8 @@ export type Order = {
   number: string
   customerId: string
   customer: Customer
+  shippingAddressId: string | null
+  shippingAddress: CustomerAddress | null
   status: OrderStatus
   notes: string | null
   items: OrderItem[]
@@ -150,6 +166,7 @@ export type CreateOrderItem = {
 
 export type CreateOrder = {
   customerId: string
+  shippingAddressId?: string
   items: CreateOrderItem[]
   notes?: string
 }
@@ -164,6 +181,20 @@ export type UpdateProduct = Partial<CreateProduct> & {
 }
 
 export type UpdateCustomer = Partial<CreateCustomer>
+
+export type CreateCustomerAddress = {
+  label: string
+  street: string
+  city: string
+  postalCode: string
+  province: string
+  country?: string
+  notes?: string
+  isDefault?: boolean
+  customerId: string
+}
+
+export type UpdateCustomerAddress = Partial<Omit<CreateCustomerAddress, 'customerId'>>
 
 export type UpdateOrderStatus = {
   status: OrderStatus

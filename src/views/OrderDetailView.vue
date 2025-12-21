@@ -130,6 +130,17 @@ function generateWhatsAppMessage(): string {
   }
 
   msg += `\n*${labels.fields.total}: ${formatCurrency(total.value)}*\n\n`
+
+  if (order.value.shippingAddress) {
+    msg += `📍 *Envio a:*\n`
+    msg += `${order.value.shippingAddress.street}\n`
+    msg += `${order.value.shippingAddress.postalCode} ${order.value.shippingAddress.city}\n`
+    if (order.value.shippingAddress.notes) {
+      msg += `(${order.value.shippingAddress.notes})\n`
+    }
+    msg += `\n`
+  }
+
   msg += `${labels.whatsapp.paymentInfo.replace('{phone}', bizumPhone)}\n\n`
   msg += labels.whatsapp.thanks
 
@@ -149,6 +160,17 @@ function generateWhatsAppMessageForLink(): string {
   }
 
   msg += `\n*${labels.fields.total}: ${total.value.toFixed(2)} EUR*\n\n`
+
+  if (order.value.shippingAddress) {
+    msg += `Envio a:\n`
+    msg += `${order.value.shippingAddress.street}\n`
+    msg += `${order.value.shippingAddress.postalCode} ${order.value.shippingAddress.city}\n`
+    if (order.value.shippingAddress.notes) {
+      msg += `(${order.value.shippingAddress.notes})\n`
+    }
+    msg += `\n`
+  }
+
   msg += `${labels.whatsapp.paymentInfo.replace('{phone}', bizumPhone)}\n\n`
   msg += labels.whatsapp.thanksPlain
 
@@ -240,6 +262,24 @@ onMounted(loadOrder)
               {{ order.customer.phone }}
             </a>
           </div>
+        </div>
+      </template>
+    </Card>
+
+    <!-- Shipping Address -->
+    <Card v-if="order.shippingAddress">
+      <template #title>
+        {{ labels.address.shippingAddress }}
+      </template>
+      <template #content>
+        <div class="shipping-address">
+          <p class="address-label-text"><strong>{{ order.shippingAddress.label }}</strong></p>
+          <p>{{ order.shippingAddress.street }}</p>
+          <p>{{ order.shippingAddress.postalCode }} {{ order.shippingAddress.city }}</p>
+          <p>{{ order.shippingAddress.province }}<span v-if="order.shippingAddress.country">, {{ order.shippingAddress.country }}</span></p>
+          <p v-if="order.shippingAddress.notes" class="address-notes">
+            {{ order.shippingAddress.notes }}
+          </p>
         </div>
       </template>
     </Card>
@@ -440,6 +480,21 @@ onMounted(loadOrder)
 
 .phone-link:hover {
   text-decoration: underline;
+}
+
+.shipping-address p {
+  margin: 0.25rem 0;
+  color: var(--color-text);
+}
+
+.shipping-address .address-label-text {
+  margin-bottom: 0.5rem;
+}
+
+.shipping-address .address-notes {
+  font-style: italic;
+  color: var(--color-text-muted);
+  margin-top: 0.5rem;
 }
 
 .items-table {

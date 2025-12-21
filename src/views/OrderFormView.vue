@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import Card from 'primevue/card'
@@ -12,10 +12,11 @@ import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
+import Tag from 'primevue/tag'
 import ImageThumbnail from '@/components/ImageThumbnail.vue'
 import { api } from '@/services/api'
 import { labels } from '@/locales/es'
-import type { Customer, Product, CreateOrder, CreateCustomer } from '@/types'
+import type { Customer, Product, CreateOrder, CreateCustomer, CustomerAddress } from '@/types'
 
 type OrderItemForm = {
   product: Product
@@ -51,6 +52,10 @@ const newCustomerForm = ref<CreateCustomer>({
 const savingCustomer = ref(false)
 const customerErrors = ref<Record<string, string>>({})
 
+// Shipping address
+const customerAddresses = ref<CustomerAddress[]>([])
+const selectedShippingAddressId = ref<string | null>(null)
+
 const customerOptions = computed(() =>
   customers.value.map((c) => ({
     ...c,
@@ -76,6 +81,31 @@ async function loadProducts() {
   } catch (err) {
     console.error('Error loading products:', err)
   }
+}
+
+// Watch customer changes to load addresses
+watch(selectedCustomer, async (newCustomer) => {
+  selectedShippingAddressId.value = null
+  customerAddresses.value = []
+
+  if (newCustomer) {
+    try {
+      customerAddresses.value = await api.customerAddresses.getByCustomer(newCustomer.id)
+      // Auto-select default address
+      const defaultAddress = customerAddresses.value.find((a) => a.isDefault)
+      if (defaultAddress) {
+        selectedShippingAddressId.value = defaultAddress.id
+      }
+    } catch (err) {
+      console.error('Error loading addresses:', err)
+    }
+  }
+})
+
+function getAddressLabel(addressId: string): string {
+  const address = customerAddresses.value.find((a) => a.id === addressId)
+  if (!address) return ''
+  return `${address.label} - ${address.street}, ${address.city}`
 }
 
 function searchProducts(event: { query: string }) {
@@ -186,6 +216,7 @@ async function createOrder() {
   try {
     const data: CreateOrder = {
       customerId: selectedCustomer.value.id,
+      shippingAddressId: selectedShippingAddressId.value || undefined,
       items: orderItems.value.map((item) => ({
         productId: item.product.id,
         quantity: item.quantity,
@@ -249,6 +280,36 @@ onMounted(() => {
                 @click="showNewCustomerDialog = true"
               />
             </div>
+          </div>
+
+          <!-- Shipping Address Selection -->
+          <div v-if="selectedCustomer && customerAddresses.length > 0" class="form-section">
+            <label>{{ labels.address.shippingAddress }}</label>
+            <Select
+              v-model="selectedShippingAddressId"
+              :options="customerAddresses"
+              optionLabel="label"
+              optionValue="id"
+              :placeholder="labels.address.selectAddress"
+              class="w-full"
+              showClear
+            >
+              <template #option="{ option }">
+                <div class="address-option">
+                  <span class="address-option-label">
+                    {{ option.label }}
+                    <Tag v-if="option.isDefault" severity="success" value="Principal" size="small" />
+                  </span>
+                  <span class="address-option-detail">
+                    {{ option.street }}, {{ option.postalCode }} {{ option.city }}
+                  </span>
+                </div>
+              </template>
+              <template #value="slotProps">
+                <span v-if="slotProps.value">{{ getAddressLabel(slotProps.value) }}</span>
+                <span v-else>{{ slotProps.placeholder }}</span>
+              </template>
+            </Select>
           </div>
 
           <!-- Product Search -->
@@ -582,6 +643,26 @@ onMounted(() => {
 
 .p-error {
   color: var(--p-red-500, #ef4444);
+}
+
+.w-full {
+  width: 100%;
+}
+
+.address-option {
+  display: flex;
+  flex-direction: column;
+}
+
+.address-option-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.address-option-detail {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary, #64748b);
 }
 
 @media (max-width: 768px) {

@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
+import { useConfirm } from 'primevue/useconfirm'
 import Card from 'primevue/card'
 import InputText from 'primevue/inputtext'
 import Textarea from 'primevue/textarea'
@@ -9,13 +10,16 @@ import Button from 'primevue/button'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Tag from 'primevue/tag'
+import ConfirmDialog from 'primevue/confirmdialog'
+import AddressDialog from '@/components/AddressDialog.vue'
 import { api } from '@/services/api'
 import { labels } from '@/locales/es'
-import type { CreateCustomer, UpdateCustomer, Order } from '@/types'
+import type { CreateCustomer, UpdateCustomer, Order, CustomerAddress } from '@/types'
 
 const route = useRoute()
 const router = useRouter()
 const toast = useToast()
+const confirm = useConfirm()
 
 const customerId = computed(() => route.params.id as string | undefined)
 const isEditMode = computed(() => !!customerId.value)
@@ -27,10 +31,14 @@ const form = ref<CreateCustomer>({
 })
 
 const orders = ref<Order[]>([])
+const addresses = ref<CustomerAddress[]>([])
 const errors = ref<Record<string, string>>({})
 const loading = ref(false)
 const loadingOrders = ref(false)
+const loadingAddresses = ref(false)
 const saving = ref(false)
+const showAddressDialog = ref(false)
+const editingAddress = ref<CustomerAddress | undefined>()
 
 function validate(): boolean {
   errors.value = {}
@@ -85,6 +93,74 @@ async function loadOrders() {
     })
   } finally {
     loadingOrders.value = false
+  }
+}
+
+async function loadAddresses() {
+  if (!customerId.value) return
+
+  loadingAddresses.value = true
+  try {
+    addresses.value = await api.customerAddresses.getByCustomer(customerId.value)
+  } catch (err) {
+    console.error('Error loading addresses', err)
+  } finally {
+    loadingAddresses.value = false
+  }
+}
+
+function openAddressDialog(address?: CustomerAddress) {
+  editingAddress.value = address
+  showAddressDialog.value = true
+}
+
+async function setDefaultAddress(id: string) {
+  try {
+    await api.customerAddresses.setDefault(id)
+    await loadAddresses()
+    toast.add({
+      severity: 'success',
+      summary: 'OK',
+      detail: labels.address.defaultUpdated,
+      life: 3000,
+    })
+  } catch (err) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: err instanceof Error ? err.message : labels.messages.errorGeneric,
+      life: 3000,
+    })
+  }
+}
+
+function confirmDeleteAddress(address: CustomerAddress) {
+  confirm.require({
+    message: labels.address.confirmDelete,
+    header: labels.actions.delete,
+    icon: 'pi pi-exclamation-triangle',
+    acceptClass: 'p-button-danger',
+    accept: () => deleteAddress(address.id),
+  })
+}
+
+async function deleteAddress(id: string) {
+  try {
+    await api.customerAddresses.delete(id)
+    await loadAddresses()
+    toast.add({
+      severity: 'success',
+      summary: 'OK',
+      detail: labels.address.deletedSuccess,
+      life: 3000,
+    })
+  } catch (err) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: err instanceof Error ? err.message : labels.messages.errorGeneric,
+      life: 3000,
+    })
   }
 }
 
@@ -166,6 +242,7 @@ onMounted(() => {
   loadCustomer()
   if (isEditMode.value) {
     loadOrders()
+    loadAddresses()
   }
 })
 </script>
@@ -227,6 +304,85 @@ onMounted(() => {
         </form>
       </template>
     </Card>
+
+    <!-- Sección Direcciones -->
+    <Card v-if="isEditMode" class="addresses-card">
+      <template #title>
+        <div class="section-header">
+          <span>{{ labels.address.title }}</span>
+          <Button
+            :label="labels.address.add"
+            icon="pi pi-plus"
+            size="small"
+            @click="openAddressDialog()"
+          />
+        </div>
+      </template>
+      <template #content>
+        <div v-if="loadingAddresses" class="loading-state">
+          <i class="pi pi-spin pi-spinner"></i>
+        </div>
+        <div v-else-if="addresses.length === 0" class="no-addresses">
+          <p>{{ labels.address.noAddresses }}</p>
+        </div>
+        <div v-else class="addresses-list">
+          <div
+            v-for="address in addresses"
+            :key="address.id"
+            class="address-card"
+            :class="{ 'is-default': address.isDefault }"
+          >
+            <div class="address-header">
+              <span class="address-label">
+                {{ address.label }}
+                <Tag v-if="address.isDefault" severity="success" value="Principal" size="small" />
+              </span>
+              <div class="address-actions">
+                <Button
+                  icon="pi pi-pencil"
+                  text
+                  rounded
+                  size="small"
+                  @click="openAddressDialog(address)"
+                />
+                <Button
+                  icon="pi pi-trash"
+                  text
+                  rounded
+                  severity="danger"
+                  size="small"
+                  @click="confirmDeleteAddress(address)"
+                />
+              </div>
+            </div>
+            <div class="address-content">
+              <p>{{ address.street }}</p>
+              <p>{{ address.postalCode }} {{ address.city }}, {{ address.province }}</p>
+              <p v-if="address.country">{{ address.country }}</p>
+              <p v-if="address.notes" class="address-notes">{{ address.notes }}</p>
+            </div>
+            <Button
+              v-if="!address.isDefault"
+              :label="labels.address.setDefault"
+              size="small"
+              text
+              @click="setDefaultAddress(address.id)"
+            />
+          </div>
+        </div>
+      </template>
+    </Card>
+
+    <!-- Dialog para añadir/editar dirección -->
+    <AddressDialog
+      v-model="showAddressDialog"
+      :customer-id="customerId || ''"
+      :address="editingAddress"
+      @saved="loadAddresses"
+    />
+
+    <!-- Confirm dialog -->
+    <ConfirmDialog />
 
     <Card v-if="isEditMode" class="orders-card">
       <template #title>
@@ -337,5 +493,78 @@ onMounted(() => {
   text-align: center;
   padding: var(--spacing-lg);
   color: var(--color-text-muted);
+}
+
+/* Addresses section */
+.addresses-card {
+  margin-top: var(--spacing-md);
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.addresses-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.address-card {
+  border: 1px solid var(--surface-border, #e5e7eb);
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.address-card.is-default {
+  border-color: var(--primary-color, #3b82f6);
+  background: var(--primary-50, #eff6ff);
+}
+
+.address-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.address-label {
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.address-actions {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.address-content p {
+  margin: 0.25rem 0;
+  color: var(--color-text-secondary, #64748b);
+}
+
+.address-notes {
+  font-style: italic;
+  font-size: 0.9rem;
+}
+
+.no-addresses {
+  text-align: center;
+  padding: 2rem;
+  color: var(--color-text-muted);
+}
+
+.no-addresses p {
+  margin: 0;
+}
+
+.loading-state {
+  display: flex;
+  justify-content: center;
+  padding: 2rem;
 }
 </style>

@@ -3,16 +3,19 @@ import type {
   Category,
   Product,
   Customer,
+  CustomerAddress,
   Order,
   OrderStatus,
   DashboardStats,
   CreateSupplier,
   CreateProduct,
   CreateCustomer,
+  CreateCustomerAddress,
   CreateOrder,
   UpdateSupplier,
   UpdateProduct,
   UpdateCustomer,
+  UpdateCustomerAddress,
   ImportSource,
   ImportProductPreview,
   ImportSearchRequest,
@@ -103,6 +106,25 @@ export const api = {
     update: (id: string, data: UpdateCustomer) =>
       request<Customer>(`/customers/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
     delete: (id: string) => request(`/customers/${id}`, { method: 'DELETE' }),
+  },
+
+  customerAddresses: {
+    getByCustomer: (customerId: string) =>
+      request<CustomerAddress[]>(`/customer-addresses/customer/${customerId}`),
+    getOne: (id: string) => request<CustomerAddress>(`/customer-addresses/${id}`),
+    create: (data: CreateCustomerAddress) =>
+      request<CustomerAddress>('/customer-addresses', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    update: (id: string, data: UpdateCustomerAddress) =>
+      request<CustomerAddress>(`/customer-addresses/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+    delete: (id: string) => request<void>(`/customer-addresses/${id}`, { method: 'DELETE' }),
+    setDefault: (id: string) =>
+      request<CustomerAddress>(`/customer-addresses/${id}/set-default`, { method: 'PATCH' }),
   },
 
   orders: {

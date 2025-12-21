@@ -72,6 +72,22 @@ export async function generateOrderPdf(order: Order) {
         ],
       },
 
+      // Dirección de envío (si existe)
+      ...(order.shippingAddress
+        ? [
+            { text: '', margin: [0, 10] as [number, number] },
+            { text: `${labels.address.shippingAddress}:`, style: 'label' },
+            { text: order.shippingAddress.street, style: 'value' },
+            {
+              text: `${order.shippingAddress.postalCode} ${order.shippingAddress.city}, ${order.shippingAddress.province}`,
+              style: 'value',
+            },
+            ...(order.shippingAddress.notes
+              ? [{ text: order.shippingAddress.notes, style: 'notes' }]
+              : []),
+          ]
+        : []),
+
       { text: '', margin: [0, 20] },
 
       // Tabla de productos
