@@ -213,9 +213,9 @@ onMounted(loadData)
             </template>
           </Column>
 
-          <Column field="code" :header="labels.fields.code" sortable style="width: 100px" />
+          <Column field="code" :header="labels.fields.code" sortable style="width: 200px" />
 
-          <Column field="name" :header="labels.fields.name" sortable style="width: 200px" />
+          <Column field="name" :header="labels.fields.name" sortable style="max-width: 150px" />
 
           <Column field="priceRetail" :header="labels.fields.priceRetail" sortable style="width: 120px">
             <template #body="{ data }">

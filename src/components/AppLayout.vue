@@ -15,6 +15,7 @@ const menuItems = [
   { label: labels.menu.dashboard, icon: 'pi pi-home', route: '/' },
   { label: labels.menu.suppliers, icon: 'pi pi-truck', route: '/suppliers' },
   { label: labels.menu.products, icon: 'pi pi-box', route: '/products' },
+  { label: labels.menu.import, icon: 'pi pi-cloud-download', route: '/import' },
   { label: labels.menu.customers, icon: 'pi pi-users', route: '/customers' },
   { label: labels.menu.orders, icon: 'pi pi-shopping-cart', route: '/orders' },
 ]
@@ -27,6 +28,7 @@ const pageTitleMap: Record<string, string> = {
   products: labels.pages.products,
   'product-new': labels.pages.productNew,
   'product-edit': labels.pages.productEdit,
+  import: labels.pages.import,
   customers: labels.pages.customers,
   'customer-new': labels.pages.customerNew,
   'customer-edit': labels.pages.customerEdit,

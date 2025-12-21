@@ -168,3 +168,65 @@ export type UpdateCustomer = Partial<CreateCustomer>
 export type UpdateOrderStatus = {
   status: OrderStatus
 }
+
+// ===========================================
+// Import types (alineado con agua-dulce-api)
+// ===========================================
+export type ImportSource = {
+  id: string
+  name: string
+  productTypes: string[]
+}
+
+export type ImportProductPreview = {
+  externalId: string
+  code: string
+  name: string
+  productType: string
+  costPriceRaw: number
+  weightGrams: number
+  metalType: string
+  size: string
+  stockQty: number
+  tags: string[]
+  notes: string
+  imageUrl: string
+  suggestedCategoryId: string | null
+}
+
+export type ProductToImport = ImportProductPreview & {
+  selected: boolean
+  costPrice: number
+  priceRetail: number | null
+  priceWholesale: number | null
+  exists?: boolean
+}
+
+export type ImportSearchRequest = {
+  source: string
+  productType: string
+}
+
+export type ImportProductItem = {
+  externalId: string
+  code: string
+  name: string
+  priceRetail?: number
+  priceWholesale?: number
+  costPrice?: number
+  imageUrl?: string
+  notes?: string
+  supplierId?: string
+  categoryId?: string
+}
+
+export type ExecuteImportRequest = {
+  source: string
+  products: ImportProductItem[]
+}
+
+export type ImportResult = {
+  imported: number
+  skipped: number
+  errors: Array<{ code: string; error: string }>
+}

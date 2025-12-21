@@ -21,6 +21,7 @@ export const labels = {
     dashboard: 'Dashboard',
     suppliers: 'Proveedores',
     products: 'Productos',
+    import: 'Importar',
     customers: 'Clientes',
     orders: 'Pedidos',
   },
@@ -32,6 +33,7 @@ export const labels = {
     products: 'Productos',
     productNew: 'Nuevo Producto',
     productEdit: 'Editar Producto',
+    import: 'Importar Productos',
     customers: 'Clientes',
     customerNew: 'Nuevo Cliente',
     customerEdit: 'Editar Cliente',
@@ -151,5 +153,53 @@ export const labels = {
     total: 'Total',
     url: 'URL',
     actions: 'Acciones',
+  },
+  import: {
+    // Steps
+    stepSource: 'Origen',
+    stepSearch: 'Buscar',
+    stepConfigure: 'Configurar',
+    stepConfirm: 'Confirmar',
+
+    // Step 1
+    selectSource: 'Selecciona el origen de importación',
+    comingSoon: 'Próximamente',
+
+    // Step 2
+    productType: 'Tipo de producto',
+    selectType: 'Seleccionar tipo',
+    targetSupplier: 'Proveedor destino',
+    defaultCategory: 'Categoría por defecto',
+    searchProducts: 'Buscar productos',
+
+    // Step 3
+    selectProducts: 'Selecciona y configura los productos',
+    image: 'Imagen',
+    cost: 'Coste',
+    retail: 'Retail',
+    b2b: 'B2B',
+    statusNew: 'Nuevo',
+    statusExists: 'Ya existe',
+    applyMargin: 'Aplicar margen',
+    customMargin: 'Margen personalizado',
+    selected: 'seleccionados',
+
+    // Step 4
+    summary: 'Resumen de importación',
+    productsToImport: 'Productos a importar',
+    productsSkipped: 'Productos omitidos (ya existen)',
+    targetSupplierLabel: 'Proveedor destino',
+    categoryLabel: 'Categoría',
+    importProducts: 'Importar productos',
+
+    // Messages
+    importSuccess: 'Importación completada',
+    importedCount: '{imported} productos importados, {skipped} omitidos',
+    noProductsSelected: 'Selecciona al menos un producto',
+    missingRetailPrice: 'Todos los productos seleccionados deben tener precio retail',
+
+    // Navigation
+    next: 'Siguiente',
+    previous: 'Anterior',
   },
 }

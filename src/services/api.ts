@@ -13,6 +13,11 @@ import type {
   UpdateSupplier,
   UpdateProduct,
   UpdateCustomer,
+  ImportSource,
+  ImportProductPreview,
+  ImportSearchRequest,
+  ExecuteImportRequest,
+  ImportResult,
 } from '@/types'
 import { useAuthStore } from '@/stores/auth'
 import router from '@/router'
@@ -127,5 +132,19 @@ export const api = {
 
   upload: {
     getAuth: () => request<{ token: string; expire: number; signature: string }>('/upload/auth'),
+  },
+
+  import: {
+    getSources: () => request<ImportSource[]>('/import/sources'),
+    search: (data: ImportSearchRequest) =>
+      request<ImportProductPreview[]>('/import/search', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    execute: (data: ExecuteImportRequest) =>
+      request<ImportResult>('/import/execute', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
   },
 }
