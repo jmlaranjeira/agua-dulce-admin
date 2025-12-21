@@ -20,7 +20,9 @@ const confirm = useConfirm()
 
 const suppliers = ref<Supplier[]>([])
 const loading = ref(true)
-const globalFilterValue = ref('')
+const filters = ref({
+  global: { value: '', matchMode: 'contains' },
+})
 
 async function loadSuppliers() {
   loading.value = true
@@ -85,7 +87,7 @@ onMounted(loadSuppliers)
       <IconField class="search-box">
         <InputIcon class="pi pi-search" />
         <InputText
-          v-model="globalFilterValue"
+          v-model="filters.global.value"
           :placeholder="labels.actions.search"
         />
       </IconField>
@@ -99,10 +101,10 @@ onMounted(loadSuppliers)
     <Card class="table-card">
       <template #content>
         <DataTable
+          v-model:filters="filters"
           :value="suppliers"
           :loading="loading"
           :globalFilterFields="['name', 'phone']"
-          :globalFilter="globalFilterValue"
           paginator
           :rows="10"
           :rowsPerPageOptions="[10, 25, 50]"
