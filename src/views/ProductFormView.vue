@@ -8,6 +8,7 @@ import InputNumber from 'primevue/inputnumber'
 import Select from 'primevue/select'
 import Checkbox from 'primevue/checkbox'
 import Button from 'primevue/button'
+import ImageUpload from '@/components/ImageUpload.vue'
 import { api } from '@/services/api'
 import { labels } from '@/locales/es'
 import type { Supplier, Category, CreateProduct, UpdateProduct } from '@/types'
@@ -69,20 +70,7 @@ function validate(): boolean {
     errors.value.priceRetail = labels.messages.required
   }
 
-  if (form.value.imageUrl && !isValidUrl(form.value.imageUrl)) {
-    errors.value.imageUrl = labels.messages.invalidUrl
-  }
-
   return Object.keys(errors.value).length === 0
-}
-
-function isValidUrl(url: string): boolean {
-  try {
-    new URL(url)
-    return true
-  } catch {
-    return false
-  }
 }
 
 async function loadData() {
@@ -286,15 +274,8 @@ onMounted(loadData)
           </div>
 
           <div class="form-field">
-            <label for="imageUrl">{{ labels.products.imageUrl }}</label>
-            <InputText
-              id="imageUrl"
-              v-model="form.imageUrl"
-              :class="{ 'p-invalid': errors.imageUrl }"
-              :disabled="loading"
-              placeholder="https://..."
-            />
-            <small v-if="errors.imageUrl" class="p-error">{{ errors.imageUrl }}</small>
+            <label>{{ labels.products.imageUrl }}</label>
+            <ImageUpload v-model="form.imageUrl" folder="products" />
           </div>
 
           <div v-if="isEditMode" class="form-field form-field-checkbox">

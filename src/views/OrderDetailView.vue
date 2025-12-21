@@ -8,6 +8,7 @@ import Tag from 'primevue/tag'
 import Button from 'primevue/button'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
+import ImageThumbnail from '@/components/ImageThumbnail.vue'
 import { api } from '@/services/api'
 import { labels } from '@/locales/es'
 import type { Order, OrderStatus } from '@/types'
@@ -174,6 +175,12 @@ onMounted(loadOrder)
       </template>
       <template #content>
         <DataTable :value="order.items" class="items-table">
+          <Column header="" style="width: 50px">
+            <template #body="{ data }">
+              <ImageThumbnail :src="data.product.imageUrl" :size="36" :preview-size="180" />
+            </template>
+          </Column>
+
           <Column header="Producto">
             <template #body="{ data }">
               <div>

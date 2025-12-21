@@ -12,6 +12,7 @@ import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
+import ImageThumbnail from '@/components/ImageThumbnail.vue'
 import { api } from '@/services/api'
 import { labels } from '@/locales/es'
 import type { Customer, Product, CreateOrder, CreateCustomer } from '@/types'
@@ -295,6 +296,12 @@ onMounted(() => {
                   {{ labels.orders.emptyCart }}
                 </div>
               </template>
+
+              <Column header="" style="width: 50px">
+                <template #body="{ data }">
+                  <ImageThumbnail :src="data.product.imageUrl" :size="36" :preview-size="180" />
+                </template>
+              </Column>
 
               <Column field="product.name" header="Producto">
                 <template #body="{ data }">

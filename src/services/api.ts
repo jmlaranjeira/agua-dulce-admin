@@ -124,4 +124,8 @@ export const api = {
   dashboard: {
     stats: () => request<DashboardStats>('/dashboard/stats'),
   },
+
+  upload: {
+    getAuth: () => request<{ token: string; expire: number; signature: string }>('/upload/auth'),
+  },
 }

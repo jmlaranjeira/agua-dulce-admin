@@ -11,6 +11,7 @@ import IconField from 'primevue/iconfield'
 import InputIcon from 'primevue/inputicon'
 import Select from 'primevue/select'
 import Tag from 'primevue/tag'
+import ImageThumbnail from '@/components/ImageThumbnail.vue'
 import { api } from '@/services/api'
 import { labels } from '@/locales/es'
 import type { Product, Supplier, Category } from '@/types'
@@ -205,6 +206,12 @@ onMounted(loadData)
               {{ labels.products.noProducts }}
             </div>
           </template>
+
+          <Column header="" style="width: 60px">
+            <template #body="{ data }">
+              <ImageThumbnail :src="data.imageUrl" :size="40" :preview-size="200" />
+            </template>
+          </Column>
 
           <Column field="code" :header="labels.fields.code" sortable style="width: 100px" />
 
