@@ -17,6 +17,13 @@ export type Supplier = {
   createdAt: string
 }
 
+export type Category = {
+  id: string
+  name: string
+  slug: string
+  order: number
+}
+
 export type Product = {
   id: string
   code: string
@@ -28,6 +35,8 @@ export type Product = {
   isActive: boolean
   supplierId: string | null
   supplier?: Supplier
+  categoryId: string | null
+  category?: Category
   createdAt: string
   updatedAt: string
 }
@@ -86,6 +95,7 @@ export type CreateProduct = {
   costPrice?: number
   imageUrl?: string
   supplierId?: string
+  categoryId?: string
 }
 
 export type CreateCustomer = {

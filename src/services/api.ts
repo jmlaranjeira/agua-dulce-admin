@@ -1,5 +1,6 @@
 import type {
   Supplier,
+  Category,
   Product,
   Customer,
   Order,
@@ -51,10 +52,11 @@ export const api = {
   },
 
   products: {
-    list: (filters?: { active?: boolean; supplierId?: string }) => {
+    list: (filters?: { active?: boolean; supplierId?: string; categoryId?: string }) => {
       const params = new URLSearchParams()
       if (filters?.active !== undefined) params.set('active', String(filters.active))
       if (filters?.supplierId) params.set('supplierId', filters.supplierId)
+      if (filters?.categoryId) params.set('categoryId', filters.categoryId)
       const query = params.toString()
       return request<Product[]>(`/products${query ? `?${query}` : ''}`)
     },
@@ -90,6 +92,10 @@ export const api = {
       request<Order>('/orders', { method: 'POST', body: JSON.stringify(data) }),
     updateStatus: (id: string, status: OrderStatus) =>
       request<Order>(`/orders/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
+  },
+
+  categories: {
+    list: () => request<Category[]>('/categories'),
   },
 
   dashboard: {

@@ -192,7 +192,7 @@ onMounted(loadSupplier)
 
 <style scoped>
 .supplier-form-view {
-  max-width: 600px;
+  width: 100%;
 }
 
 .form {
