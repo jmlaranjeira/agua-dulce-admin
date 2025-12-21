@@ -8,6 +8,8 @@ import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
+import IconField from 'primevue/iconfield'
+import InputIcon from 'primevue/inputicon'
 import { api } from '@/services/api'
 import { labels } from '@/locales/es'
 import type { Supplier } from '@/types'
@@ -18,7 +20,7 @@ const confirm = useConfirm()
 
 const suppliers = ref<Supplier[]>([])
 const loading = ref(true)
-const searchQuery = ref('')
+const globalFilterValue = ref('')
 
 async function loadSuppliers() {
   loading.value = true
@@ -80,15 +82,13 @@ onMounted(loadSuppliers)
 <template>
   <div class="suppliers-view">
     <div class="view-header">
-      <div class="search-box">
-        <span class="p-input-icon-left">
-          <i class="pi pi-search" />
-          <InputText
-            v-model="searchQuery"
-            :placeholder="labels.actions.search"
-          />
-        </span>
-      </div>
+      <IconField class="search-box">
+        <InputIcon class="pi pi-search" />
+        <InputText
+          v-model="globalFilterValue"
+          :placeholder="labels.actions.search"
+        />
+      </IconField>
       <Button
         :label="labels.suppliers.newSupplier"
         icon="pi pi-plus"
@@ -102,7 +102,7 @@ onMounted(loadSuppliers)
           :value="suppliers"
           :loading="loading"
           :globalFilterFields="['name', 'phone']"
-          :global-filter="searchQuery"
+          :globalFilter="globalFilterValue"
           paginator
           :rows="10"
           :rowsPerPageOptions="[10, 25, 50]"
@@ -186,7 +186,7 @@ onMounted(loadSuppliers)
   max-width: 300px;
 }
 
-.search-box input {
+.search-box :deep(input) {
   width: 100%;
 }
 
