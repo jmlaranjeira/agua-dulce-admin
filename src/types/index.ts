@@ -70,11 +70,25 @@ export type Order = {
   updatedAt: string
 }
 
+export type RecentOrder = {
+  id: string
+  number: string
+  customerName: string
+  total: number
+  status: OrderStatus
+  createdAt: string
+}
+
 export type DashboardStats = {
   ordersToday: number
   totalToday: number
   pendingOrders: number
   marginToday: number | null
+  paidOrders: number
+  shippedOrders: number
+  customersCount: number
+  productsCount: number
+  recentOrders: RecentOrder[]
 }
 
 // ===========================================
