@@ -63,11 +63,11 @@ async function loadSupplier() {
       url: supplier.url || '',
       notes: supplier.notes || '',
     }
-  } catch {
+  } catch (err) {
     toast.add({
       severity: 'error',
       summary: 'Error',
-      detail: labels.messages.errorGeneric,
+      detail: err instanceof Error ? err.message : labels.messages.errorGeneric,
       life: 3000,
     })
     router.push('/suppliers')
@@ -101,11 +101,11 @@ async function save() {
       life: 3000,
     })
     router.push('/suppliers')
-  } catch {
+  } catch (err) {
     toast.add({
       severity: 'error',
       summary: 'Error',
-      detail: labels.messages.errorGeneric,
+      detail: err instanceof Error ? err.message : labels.messages.errorGeneric,
       life: 3000,
     })
   } finally {

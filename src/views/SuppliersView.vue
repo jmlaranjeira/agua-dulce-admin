@@ -23,11 +23,11 @@ async function loadSuppliers() {
   loading.value = true
   try {
     suppliers.value = await api.suppliers.list()
-  } catch {
+  } catch (err) {
     toast.add({
       severity: 'error',
       summary: 'Error',
-      detail: labels.messages.errorGeneric,
+      detail: err instanceof Error ? err.message : labels.messages.errorGeneric,
       life: 3000,
     })
   } finally {
@@ -63,11 +63,11 @@ async function deleteSupplier(id: string) {
       detail: labels.suppliers.deletedSuccess,
       life: 3000,
     })
-  } catch {
+  } catch (err) {
     toast.add({
       severity: 'error',
       summary: 'Error',
-      detail: labels.messages.errorGeneric,
+      detail: err instanceof Error ? err.message : labels.messages.errorGeneric,
       life: 3000,
     })
   }

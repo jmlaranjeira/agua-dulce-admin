@@ -24,7 +24,15 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({}))
-    throw new Error(error.message || `Error ${response.status}`)
+
+    let message: string
+    if (error.message) {
+      message = Array.isArray(error.message) ? error.message[0] : error.message
+    } else {
+      message = `Error ${response.status}`
+    }
+
+    throw new Error(message)
   }
 
   return response.json()
