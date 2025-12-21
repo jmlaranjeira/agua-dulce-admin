@@ -77,17 +77,17 @@ export function generateOrderPdf(order: Order) {
           body: [
             [
               { text: 'Producto', style: 'tableHeader' },
-              { text: labels.fields.price, style: 'tableHeader', alignment: 'right' },
-              { text: 'Cant.', style: 'tableHeader', alignment: 'center' },
-              { text: labels.orders.subtotal, style: 'tableHeader', alignment: 'right' },
+              { text: labels.fields.price, style: 'tableHeader', alignment: 'right' as const },
+              { text: 'Cant.', style: 'tableHeader', alignment: 'center' as const },
+              { text: labels.orders.subtotal, style: 'tableHeader', alignment: 'right' as const },
             ],
             ...order.items.map((item) => [
               { text: item.product.name },
-              { text: `${Number(item.unitPrice).toFixed(2)} €`, alignment: 'right' },
-              { text: item.quantity.toString(), alignment: 'center' },
+              { text: `${Number(item.unitPrice).toFixed(2)} €`, alignment: 'right' as const },
+              { text: item.quantity.toString(), alignment: 'center' as const },
               {
                 text: `${(item.quantity * Number(item.unitPrice)).toFixed(2)} €`,
-                alignment: 'right',
+                alignment: 'right' as const,
               },
             ]),
           ],
