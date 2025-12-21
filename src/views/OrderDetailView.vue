@@ -116,6 +116,57 @@ function goBack() {
   router.push('/orders')
 }
 
+function generateWhatsAppMessage(): string {
+  if (!order.value) return ''
+  const bizumPhone = import.meta.env.VITE_BIZUM_PHONE || ''
+
+  let msg = `🛒 *Pedido ${order.value.number}*\n\n`
+  msg += `${labels.whatsapp.greeting}\n\n`
+
+  for (const item of order.value.items) {
+    const subtotal = item.quantity * item.unitPrice
+    msg += `• ${item.product.name} x${item.quantity} — ${formatCurrency(subtotal)}\n`
+  }
+
+  msg += `\n*${labels.fields.total}: ${formatCurrency(total.value)}*\n\n`
+  msg += `${labels.whatsapp.paymentInfo.replace('{phone}', bizumPhone)}\n\n`
+  msg += labels.whatsapp.thanks
+
+  return msg
+}
+
+function generateWhatsAppMessageForLink(): string {
+  if (!order.value) return ''
+  const bizumPhone = import.meta.env.VITE_BIZUM_PHONE || ''
+
+  let msg = `*Pedido ${order.value.number}*\n\n`
+  msg += `${labels.whatsapp.greetingPlain}\n\n`
+
+  for (const item of order.value.items) {
+    const subtotal = item.quantity * item.unitPrice
+    msg += `- ${item.product.name} x${item.quantity} - ${subtotal.toFixed(2)} EUR\n`
+  }
+
+  msg += `\n*${labels.fields.total}: ${total.value.toFixed(2)} EUR*\n\n`
+  msg += `${labels.whatsapp.paymentInfo.replace('{phone}', bizumPhone)}\n\n`
+  msg += labels.whatsapp.thanksPlain
+
+  return msg
+}
+
+function openWhatsApp() {
+  if (!order.value) return
+  const message = generateWhatsAppMessageForLink()
+  const phone = order.value.customer.phone.replace(/[^0-9]/g, '')
+  const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
+  window.open(url, '_blank')
+}
+
+function copyToClipboard() {
+  navigator.clipboard.writeText(generateWhatsAppMessage())
+  toast.add({ severity: 'success', summary: labels.orders.copyMessage, detail: labels.orders.messageCopied, life: 2000 })
+}
+
 onMounted(loadOrder)
 </script>
 
@@ -138,11 +189,28 @@ onMounted(loadOrder)
               <span class="order-date">{{ formatDate(order.createdAt) }}</span>
             </div>
           </div>
-          <Tag
-            :value="labels.status[order.status as keyof typeof labels.status]"
-            :severity="getStatusSeverity(order.status)"
-            class="status-tag"
-          />
+          <div class="header-right">
+            <div class="whatsapp-buttons">
+              <Button
+                icon="pi pi-copy"
+                :label="labels.orders.copyMessage"
+                severity="secondary"
+                outlined
+                @click="copyToClipboard"
+              />
+              <Button
+                icon="pi pi-comments"
+                :label="labels.orders.sendWhatsApp"
+                severity="success"
+                @click="openWhatsApp"
+              />
+            </div>
+            <Tag
+              :value="labels.status[order.status as keyof typeof labels.status]"
+              :severity="getStatusSeverity(order.status)"
+              class="status-tag"
+            />
+          </div>
         </div>
       </template>
     </Card>
@@ -320,6 +388,17 @@ onMounted(loadOrder)
   font-size: 0.9rem;
 }
 
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.whatsapp-buttons {
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
 .status-tag {
   font-size: 1rem;
   padding: 0.5rem 1rem;
@@ -415,6 +494,20 @@ onMounted(loadOrder)
     flex-direction: column;
     align-items: flex-start;
     gap: var(--spacing-md);
+  }
+
+  .header-right {
+    width: 100%;
+    flex-direction: column-reverse;
+    align-items: flex-start;
+  }
+
+  .whatsapp-buttons {
+    width: 100%;
+  }
+
+  .whatsapp-buttons button {
+    flex: 1;
   }
 
   .action-buttons {

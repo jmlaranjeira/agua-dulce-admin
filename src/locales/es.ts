@@ -120,6 +120,16 @@ export const labels = {
     confirmCancel: '¿Estás seguro de que quieres cancelar este pedido?',
     customerInfo: 'Datos del cliente',
     orderItems: 'Productos del pedido',
+    sendWhatsApp: 'Enviar por WhatsApp',
+    copyMessage: 'Copiar',
+    messageCopied: 'Mensaje copiado al portapapeles',
+  },
+  whatsapp: {
+    greeting: 'Hola! Te envío el resumen de tu pedido:',
+    greetingPlain: 'Hola! Te envio el resumen de tu pedido:',
+    paymentInfo: 'Puedes pagar por Bizum al {phone}',
+    thanks: '¡Gracias! 💙',
+    thanksPlain: 'Gracias!',
   },
   fields: {
     name: 'Nombre',
