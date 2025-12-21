@@ -84,6 +84,30 @@ src/
 
 Estados de pedido: PENDING → PAID → SHIPPED → DELIVERED | CANCELLED
 
+## Patrones de vistas
+
+### ListView (ver SuppliersView.vue como referencia)
+```
+- Header con búsqueda (IconField + InputIcon) + botón nuevo
+- Card envolviendo DataTable
+- Filtros con v-model:filters y objeto { global: { value, matchMode } }
+- Toast para errores (useToast)
+- ConfirmDialog para eliminar (useConfirm)
+- Empty state en template #empty
+- Tooltips en botones de acciones
+```
+
+### FormView (ver SupplierFormView.vue como referencia)
+```
+- Detectar modo crear/editar con computed(() => route.params.id)
+- Card con formulario
+- Validación local en función validate() → retorna boolean
+- Estados: loading (cargar datos) + saving (guardar)
+- Redirect a lista después de guardar con router.push()
+- Botones: Cancelar (outlined) + Guardar (primary)
+- Mostrar error real del backend con err.message
+```
+
 ## Comandos útiles
 ```bash
 npm run dev            # Desarrollo (HMR)
