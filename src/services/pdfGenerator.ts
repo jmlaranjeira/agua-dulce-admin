@@ -1,10 +1,6 @@
-import pdfMake from 'pdfmake/build/pdfmake'
-import pdfFonts from 'pdfmake/build/vfs_fonts'
 import type { TDocumentDefinitions } from 'pdfmake/interfaces'
 import type { Order } from '@/types'
 import { labels } from '@/locales/es'
-
-pdfMake.vfs = pdfFonts.vfs
 
 function formatDate(dateString: string): string {
   const date = new Date(dateString)
@@ -17,7 +13,14 @@ function formatDate(dateString: string): string {
   })
 }
 
-export function generateOrderPdf(order: Order) {
+export async function generateOrderPdf(order: Order) {
+  const [pdfMakeModule, pdfFontsModule] = await Promise.all([
+    import('pdfmake/build/pdfmake'),
+    import('pdfmake/build/vfs_fonts'),
+  ])
+  const pdfMake = pdfMakeModule.default
+  pdfMake.vfs = pdfFontsModule.default.vfs
+
   const bizumPhone = import.meta.env.VITE_BIZUM_PHONE || ''
   const total = order.items.reduce(
     (sum, item) => sum + item.quantity * Number(item.unitPrice),
