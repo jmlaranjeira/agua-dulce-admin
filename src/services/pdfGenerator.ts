@@ -19,7 +19,9 @@ export async function generateOrderPdf(order: Order) {
     import('pdfmake/build/vfs_fonts'),
   ])
   const pdfMake = pdfMakeModule.default
-  pdfMake.vfs = pdfFontsModule.default.vfs
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const fonts = pdfFontsModule as any
+  pdfMake.vfs = fonts.pdfMake?.vfs || fonts.default || fonts
 
   const bizumPhone = import.meta.env.VITE_BIZUM_PHONE || ''
   const total = order.items.reduce(
