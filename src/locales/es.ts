@@ -47,6 +47,18 @@ export const labels = {
     savedSuccess: 'Guardado correctamente',
     deleteSuccess: 'Eliminado correctamente',
     errorGeneric: 'Ha ocurrido un error',
+    noResults: 'No se encontraron resultados',
+    loading: 'Cargando...',
+    required: 'Este campo es obligatorio',
+    invalidUrl: 'URL no válida',
+  },
+  suppliers: {
+    newSupplier: 'Nuevo proveedor',
+    noSuppliers: 'No hay proveedores registrados',
+    confirmDelete: '¿Estás seguro de que quieres eliminar este proveedor?',
+    deleteWarning: 'Esta acción no se puede deshacer.',
+    savedSuccess: 'Proveedor guardado correctamente',
+    deletedSuccess: 'Proveedor eliminado correctamente',
   },
   fields: {
     name: 'Nombre',
@@ -65,5 +77,6 @@ export const labels = {
     quantity: 'Cantidad',
     total: 'Total',
     url: 'URL',
+    actions: 'Acciones',
   },
 }
