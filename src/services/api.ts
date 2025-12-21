@@ -14,14 +14,35 @@ import type {
   UpdateProduct,
   UpdateCustomer,
 } from '@/types'
+import { useAuthStore } from '@/stores/auth'
+import router from '@/router'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
+  const authStore = useAuthStore()
+
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+    ...(options?.headers || {}),
+  }
+
+  // Añadir token de autenticación si existe
+  if (authStore.token) {
+    ;(headers as Record<string, string>)['Authorization'] = `Bearer ${authStore.token}`
+  }
+
   const response = await fetch(`${API_URL}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
     ...options,
+    headers,
   })
+
+  // Manejar 401 Unauthorized
+  if (response.status === 401) {
+    authStore.logout()
+    router.push('/login')
+    throw new Error('Sesión expirada')
+  }
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({}))

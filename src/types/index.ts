@@ -1,6 +1,31 @@
 // Alineado con agua-dulce-api DTOs y Prisma schema
 
 // ===========================================
+// Auth types
+// ===========================================
+export interface User {
+  id: number
+  email: string
+  name: string
+}
+
+export interface LoginRequest {
+  email: string
+  password: string
+}
+
+export interface LoginResponse {
+  accessToken: string
+  user: User
+}
+
+export interface RegisterRequest {
+  email: string
+  password: string
+  name: string
+}
+
+// ===========================================
 // Enums
 // ===========================================
 export type OrderStatus = 'PENDING' | 'PAID' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED'

@@ -4,9 +4,11 @@ import { useRoute, useRouter } from 'vue-router'
 import Button from 'primevue/button'
 import Sidebar from 'primevue/sidebar'
 import { labels } from '@/locales/es'
+import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
 const router = useRouter()
+const authStore = useAuthStore()
 const sidebarVisible = ref(false)
 
 const menuItems = [
@@ -47,6 +49,11 @@ function isActive(path: string): boolean {
     return route.path === '/'
   }
   return route.path.startsWith(path)
+}
+
+function handleLogout() {
+  authStore.logout()
+  router.push('/login')
 }
 </script>
 
@@ -100,6 +107,17 @@ function isActive(path: string): boolean {
           @click="sidebarVisible = true"
         />
         <h1 class="page-title">{{ pageTitle }}</h1>
+        <div class="header-user">
+          <span class="user-name">{{ authStore.user?.name }}</span>
+          <Button
+            icon="pi pi-sign-out"
+            :label="labels.auth.logout"
+            severity="secondary"
+            text
+            size="small"
+            @click="handleLogout"
+          />
+        </div>
       </header>
 
       <main class="content">

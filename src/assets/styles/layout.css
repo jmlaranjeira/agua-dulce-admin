@@ -94,6 +94,18 @@
   font-weight: 600;
   color: var(--color-text);
   margin: 0;
+  flex: 1;
+}
+
+.header-user {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.user-name {
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
 }
 
 .mobile-menu-btn {
@@ -117,6 +129,10 @@
 
   .mobile-menu-btn {
     display: flex !important;
+  }
+
+  .user-name {
+    display: none;
   }
 }
 

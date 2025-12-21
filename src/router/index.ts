@@ -1,8 +1,25 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+
+const PUBLIC_ROUTES = ['login', 'register']
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
+    // Auth
+    {
+      path: '/login',
+      name: 'login',
+      component: () => import('../views/LoginView.vue'),
+      meta: { public: true },
+    },
+    {
+      path: '/register',
+      name: 'register',
+      component: () => import('../views/RegisterView.vue'),
+      meta: { public: true },
+    },
+
     // Dashboard
     {
       path: '/',
@@ -78,6 +95,22 @@ const router = createRouter({
       component: () => import('../views/OrderDetailView.vue'),
     },
   ],
+})
+
+// Navigation guard
+router.beforeEach((to, _from, next) => {
+  const authStore = useAuthStore()
+  const isPublicRoute = PUBLIC_ROUTES.includes(to.name as string)
+
+  if (!authStore.isAuthenticated && !isPublicRoute) {
+    // No autenticado intentando acceder a ruta protegida
+    next({ name: 'login' })
+  } else if (authStore.isAuthenticated && to.name === 'login') {
+    // Autenticado intentando ir a login
+    next({ name: 'dashboard' })
+  } else {
+    next()
+  }
 })
 
 export default router

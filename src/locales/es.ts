@@ -2,6 +2,21 @@ export const labels = {
   app: {
     name: 'Agua Dulce',
   },
+  auth: {
+    login: 'Iniciar sesion',
+    logout: 'Cerrar sesion',
+    register: 'Registrarse',
+    email: 'Correo electronico',
+    password: 'Contrasena',
+    confirmPassword: 'Confirmar contrasena',
+    name: 'Nombre',
+    invalidCredentials: 'Credenciales incorrectas',
+    userCreated: 'Usuario creado exitosamente',
+    registrationDisabled: 'El registro esta deshabilitado. Ya existe un usuario administrador.',
+    createFirstUser: 'Crear usuario administrador',
+    goToLogin: 'Ir a iniciar sesion',
+    passwordMismatch: 'Las contrasenas no coinciden',
+  },
   menu: {
     dashboard: 'Dashboard',
     suppliers: 'Proveedores',
