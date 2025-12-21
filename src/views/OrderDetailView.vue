@@ -10,6 +10,7 @@ import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import ImageThumbnail from '@/components/ImageThumbnail.vue'
 import { api } from '@/services/api'
+import { generateOrderPdf } from '@/services/pdfGenerator'
 import { labels } from '@/locales/es'
 import type { Order, OrderStatus } from '@/types'
 
@@ -190,7 +191,14 @@ onMounted(loadOrder)
             </div>
           </div>
           <div class="header-right">
-            <div class="whatsapp-buttons">
+            <div class="header-buttons">
+              <Button
+                icon="pi pi-file-pdf"
+                :label="labels.orders.downloadPdf"
+                severity="danger"
+                outlined
+                @click="generateOrderPdf(order!)"
+              />
               <Button
                 icon="pi pi-copy"
                 :label="labels.orders.copyMessage"
@@ -394,7 +402,7 @@ onMounted(loadOrder)
   gap: var(--spacing-md);
 }
 
-.whatsapp-buttons {
+.header-buttons {
   display: flex;
   gap: var(--spacing-sm);
 }
@@ -502,11 +510,12 @@ onMounted(loadOrder)
     align-items: flex-start;
   }
 
-  .whatsapp-buttons {
+  .header-buttons {
     width: 100%;
+    flex-wrap: wrap;
   }
 
-  .whatsapp-buttons button {
+  .header-buttons button {
     flex: 1;
   }
 
