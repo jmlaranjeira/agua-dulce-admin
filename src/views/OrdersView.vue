@@ -10,6 +10,7 @@ import Select from 'primevue/select'
 import Tag from 'primevue/tag'
 import DatePicker from 'primevue/datepicker'
 import { api } from '@/services/api'
+import { exportOrdersToCsv } from '@/services/csvExporter'
 import { labels } from '@/locales/es'
 import type { Order, Customer, OrderStatus } from '@/types'
 
@@ -177,11 +178,20 @@ onMounted(() => {
           @click="clearFilters"
         />
       </div>
-      <Button
-        :label="labels.orders.newOrder"
-        icon="pi pi-plus"
-        @click="goToNew"
-      />
+      <div class="header-actions">
+        <Button
+          icon="pi pi-download"
+          label="Exportar"
+          severity="secondary"
+          outlined
+          @click="exportOrdersToCsv(orders)"
+        />
+        <Button
+          :label="labels.orders.newOrder"
+          icon="pi pi-plus"
+          @click="goToNew"
+        />
+      </div>
     </div>
 
     <Card class="table-card">
@@ -285,6 +295,11 @@ onMounted(() => {
   min-width: 220px;
 }
 
+.header-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
 .table-card {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.06);
 }
@@ -346,6 +361,10 @@ onMounted(() => {
   .filter-select,
   .filter-date {
     width: 100%;
+  }
+
+  .header-actions {
+    flex-direction: column;
   }
 }
 </style>
