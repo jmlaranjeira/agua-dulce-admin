@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
+import Card from 'primevue/card'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Button from 'primevue/button'
@@ -95,66 +96,73 @@ onMounted(loadSuppliers)
       />
     </div>
 
-    <DataTable
-      :value="suppliers"
-      :loading="loading"
-      :globalFilterFields="['name', 'phone']"
-      :global-filter="searchQuery"
-      paginator
-      :rows="10"
-      :rowsPerPageOptions="[10, 25, 50]"
-      stripedRows
-      class="suppliers-table"
-    >
-      <template #empty>
-        <div class="empty-message">
-          {{ labels.suppliers.noSuppliers }}
-        </div>
+    <Card class="table-card">
+      <template #content>
+        <DataTable
+          :value="suppliers"
+          :loading="loading"
+          :globalFilterFields="['name', 'phone']"
+          :global-filter="searchQuery"
+          paginator
+          :rows="10"
+          :rowsPerPageOptions="[10, 25, 50]"
+          stripedRows
+          rowHover
+          class="suppliers-table"
+        >
+          <template #empty>
+            <div class="empty-message">
+              {{ labels.suppliers.noSuppliers }}
+            </div>
+          </template>
+
+          <Column field="name" :header="labels.fields.name" sortable />
+
+          <Column field="phone" :header="labels.fields.phone">
+            <template #body="{ data }">
+              {{ data.phone || '-' }}
+            </template>
+          </Column>
+
+          <Column field="url" :header="labels.fields.url">
+            <template #body="{ data }">
+              <a
+                v-if="data.url"
+                :href="data.url"
+                target="_blank"
+                rel="noopener"
+                class="url-link"
+              >
+                {{ data.url }}
+              </a>
+              <span v-else>-</span>
+            </template>
+          </Column>
+
+          <Column :header="labels.fields.actions" style="width: 120px">
+            <template #body="{ data }">
+              <div class="actions">
+                <Button
+                  icon="pi pi-pencil"
+                  text
+                  rounded
+                  v-tooltip.top="labels.actions.edit"
+                  @click="goToEdit(data.id)"
+                />
+                <Button
+                  icon="pi pi-trash"
+                  text
+                  rounded
+                  severity="danger"
+                  v-tooltip.top="labels.actions.delete"
+                  @click="confirmDelete(data)"
+                />
+              </div>
+            </template>
+          </Column>
+        </DataTable>
       </template>
-
-      <Column field="name" :header="labels.fields.name" sortable />
-
-      <Column field="phone" :header="labels.fields.phone">
-        <template #body="{ data }">
-          {{ data.phone || '-' }}
-        </template>
-      </Column>
-
-      <Column field="url" :header="labels.fields.url">
-        <template #body="{ data }">
-          <a
-            v-if="data.url"
-            :href="data.url"
-            target="_blank"
-            rel="noopener"
-            class="url-link"
-          >
-            {{ data.url }}
-          </a>
-          <span v-else>-</span>
-        </template>
-      </Column>
-
-      <Column :header="labels.fields.actions" style="width: 120px">
-        <template #body="{ data }">
-          <div class="actions">
-            <Button
-              icon="pi pi-pencil"
-              text
-              rounded
-              @click="goToEdit(data.id)"
-            />
-            <Button
-              icon="pi pi-trash"
-              text
-              rounded
-              severity="danger"
-              @click="confirmDelete(data)"
-            />
-          </div>
-        </template>
-      </Column>
-    </DataTable>
+    </Card>
   </div>
 </template>
 
@@ -180,6 +188,37 @@ onMounted(loadSuppliers)
 
 .search-box input {
   width: 100%;
+}
+
+.table-card {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+.table-card :deep(.p-card-body) {
+  padding: 0;
+}
+
+.table-card :deep(.p-card-content) {
+  padding: 0;
+}
+
+/* Table header styling */
+.suppliers-table :deep(.p-datatable-thead > tr > th) {
+  background-color: #f8fafc;
+  font-weight: 600;
+  color: var(--color-text);
+  padding: 1rem 1.25rem;
+  border-bottom: 2px solid var(--color-border);
+}
+
+/* Table cells padding */
+.suppliers-table :deep(.p-datatable-tbody > tr > td) {
+  padding: 0.875rem 1.25rem;
+}
+
+/* Row hover */
+.suppliers-table :deep(.p-datatable-tbody > tr:hover) {
+  background-color: #f1f5f9 !important;
 }
 
 .empty-message {
