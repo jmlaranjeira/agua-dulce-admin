@@ -24,6 +24,8 @@ export async function generateOrderPdf(order: Order) {
   pdfMake.vfs = fonts.pdfMake?.vfs || fonts.default || fonts
 
   const bizumPhone = import.meta.env.VITE_BIZUM_PHONE || ''
+  const revolutTag = import.meta.env.VITE_REVOLUT_TAG || ''
+  const ibanAccount = import.meta.env.VITE_IBAN_ACCOUNT || ''
   const total = order.items.reduce(
     (sum, item) => sum + item.quantity * Number(item.unitPrice),
     0
@@ -150,19 +152,13 @@ export async function generateOrderPdf(order: Order) {
       {
         stack: [
           { text: 'Datos de pago:', style: 'label' },
-          { text: `Bizum: ${bizumPhone}`, style: 'value' },
+          ...(bizumPhone ? [{ text: `Bizum: ${bizumPhone}`, style: 'value' }] : []),
+          ...(revolutTag ? [{ text: `Revolut: ${revolutTag}`, style: 'value' }] : []),
+          ...(ibanAccount ? [{ text: `Transferencia: ${ibanAccount}`, style: 'value' }] : []),
         ],
       },
 
       { text: '', margin: [0, 30] },
-
-      // Notas (si hay)
-      ...(order.notes
-        ? [
-            { text: `${labels.fields.notes}:`, style: 'label' },
-            { text: order.notes, style: 'notes' },
-          ]
-        : []),
 
       // Footer
       {

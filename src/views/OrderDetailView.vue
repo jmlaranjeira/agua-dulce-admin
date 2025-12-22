@@ -126,9 +126,24 @@ function goBack() {
   router.push('/orders')
 }
 
+function buildPaymentInfo(useEmoji = true): string {
+  const bizumPhone = import.meta.env.VITE_BIZUM_PHONE || ''
+  const revolutTag = import.meta.env.VITE_REVOLUT_TAG || ''
+  const ibanAccount = import.meta.env.VITE_IBAN_ACCOUNT || ''
+
+  const methods: string[] = []
+  if (bizumPhone) methods.push(labels.whatsapp.bizum.replace('{phone}', bizumPhone))
+  if (revolutTag) methods.push(labels.whatsapp.revolut.replace('{tag}', revolutTag))
+  if (ibanAccount) methods.push(labels.whatsapp.iban.replace('{iban}', ibanAccount))
+
+  if (methods.length === 0) return ''
+
+  const icon = useEmoji ? '💳 ' : ''
+  return `${icon}*${labels.whatsapp.paymentMethods}*\n${methods.join('\n')}`
+}
+
 function generateWhatsAppMessage(): string {
   if (!order.value) return ''
-  const bizumPhone = import.meta.env.VITE_BIZUM_PHONE || ''
 
   let msg = `🛒 *Pedido ${order.value.number}*\n\n`
   msg += `${labels.whatsapp.greeting}\n\n`
@@ -150,7 +165,9 @@ function generateWhatsAppMessage(): string {
     msg += `\n`
   }
 
-  msg += `${labels.whatsapp.paymentInfo.replace('{phone}', bizumPhone)}\n\n`
+  const paymentInfo = buildPaymentInfo(true)
+  if (paymentInfo) msg += `${paymentInfo}\n\n`
+
   msg += labels.whatsapp.thanks
 
   return msg
@@ -158,7 +175,6 @@ function generateWhatsAppMessage(): string {
 
 function generateWhatsAppMessageForLink(): string {
   if (!order.value) return ''
-  const bizumPhone = import.meta.env.VITE_BIZUM_PHONE || ''
 
   let msg = `*Pedido ${order.value.number}*\n\n`
   msg += `${labels.whatsapp.greetingPlain}\n\n`
@@ -180,7 +196,9 @@ function generateWhatsAppMessageForLink(): string {
     msg += `\n`
   }
 
-  msg += `${labels.whatsapp.paymentInfo.replace('{phone}', bizumPhone)}\n\n`
+  const paymentInfo = buildPaymentInfo(false)
+  if (paymentInfo) msg += `${paymentInfo}\n\n`
+
   msg += labels.whatsapp.thanksPlain
 
   return msg
@@ -291,44 +309,47 @@ onMounted(loadOrder)
       </template>
     </Card>
 
-    <!-- Customer Info -->
-    <Card>
-      <template #title>
-        {{ labels.orders.customerInfo }}
-      </template>
-      <template #content>
-        <div class="customer-info">
-          <div class="info-row">
-            <span class="info-label">{{ labels.fields.name }}:</span>
-            <span class="info-value">{{ order.customer.name }}</span>
+    <!-- Customer & Shipping Row -->
+    <div class="customer-shipping-row">
+      <!-- Customer Info -->
+      <Card>
+        <template #title>
+          {{ labels.orders.customerInfo }}
+        </template>
+        <template #content>
+          <div class="customer-info">
+            <div class="info-row">
+              <span class="info-label">{{ labels.fields.name }}:</span>
+              <span class="info-value">{{ order.customer.name }}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">{{ labels.fields.phone }}:</span>
+              <a :href="`tel:${order.customer.phone}`" class="phone-link">
+                {{ order.customer.phone }}
+              </a>
+            </div>
           </div>
-          <div class="info-row">
-            <span class="info-label">{{ labels.fields.phone }}:</span>
-            <a :href="`tel:${order.customer.phone}`" class="phone-link">
-              {{ order.customer.phone }}
-            </a>
-          </div>
-        </div>
-      </template>
-    </Card>
+        </template>
+      </Card>
 
-    <!-- Shipping Address -->
-    <Card v-if="order.shippingAddress">
-      <template #title>
-        {{ labels.address.shippingAddress }}
-      </template>
-      <template #content>
-        <div class="shipping-address">
-          <p class="address-label-text"><strong>{{ order.shippingAddress.label }}</strong></p>
-          <p>{{ order.shippingAddress.street }}</p>
-          <p>{{ order.shippingAddress.postalCode }} {{ order.shippingAddress.city }}</p>
-          <p>{{ order.shippingAddress.province }}<span v-if="order.shippingAddress.country">, {{ order.shippingAddress.country }}</span></p>
-          <p v-if="order.shippingAddress.notes" class="address-notes">
-            {{ order.shippingAddress.notes }}
-          </p>
-        </div>
-      </template>
-    </Card>
+      <!-- Shipping Address -->
+      <Card v-if="order.shippingAddress">
+        <template #title>
+          {{ labels.address.shippingAddress }}
+        </template>
+        <template #content>
+          <div class="shipping-address">
+            <p class="address-label-text"><strong>{{ order.shippingAddress.label }}</strong></p>
+            <p>{{ order.shippingAddress.street }}</p>
+            <p>{{ order.shippingAddress.postalCode }} {{ order.shippingAddress.city }}</p>
+            <p>{{ order.shippingAddress.province }}<span v-if="order.shippingAddress.country">, {{ order.shippingAddress.country }}</span></p>
+            <p v-if="order.shippingAddress.notes" class="address-notes">
+              {{ order.shippingAddress.notes }}
+            </p>
+          </div>
+        </template>
+      </Card>
+    </div>
 
     <!-- Order Items -->
     <Card>
@@ -480,6 +501,16 @@ onMounted(loadOrder)
 .utility-buttons {
   display: flex;
   gap: var(--spacing-xs);
+}
+
+.customer-shipping-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-lg);
+}
+
+.customer-shipping-row > :deep(.p-card) {
+  margin: 0;
 }
 
 .customer-info {
@@ -651,6 +682,10 @@ onMounted(loadOrder)
 
   .utility-buttons {
     justify-content: flex-start;
+  }
+
+  .customer-shipping-row {
+    grid-template-columns: 1fr;
   }
 }
 </style>

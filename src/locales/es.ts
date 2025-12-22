@@ -154,7 +154,10 @@ export const labels = {
   whatsapp: {
     greeting: 'Hola! Te envío el resumen de tu pedido:',
     greetingPlain: 'Hola! Te envio el resumen de tu pedido:',
-    paymentInfo: 'Puedes pagar por Bizum al {phone}',
+    paymentMethods: 'Formas de pago:',
+    bizum: 'Bizum: {phone}',
+    revolut: 'Revolut: {tag}',
+    iban: 'Transferencia: {iban}',
     thanks: '¡Gracias! 💙',
     thanksPlain: 'Gracias!',
   },
