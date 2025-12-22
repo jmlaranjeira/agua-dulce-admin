@@ -12,6 +12,7 @@ import ImageThumbnail from '@/components/ImageThumbnail.vue'
 import { api } from '@/services/api'
 import { generateOrderPdf } from '@/services/pdfGenerator'
 import { labels } from '@/locales/es'
+import { useOrderMargin } from '@/composables/useOrderMargin'
 import type { Order, OrderStatus } from '@/types'
 
 const route = useRoute()
@@ -24,10 +25,18 @@ const order = ref<Order | null>(null)
 const loading = ref(true)
 const updating = ref(false)
 
-const total = computed(() => {
-  if (!order.value) return 0
-  return order.value.items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0)
-})
+// Extract items for the composable
+const orderItems = computed(() => order.value?.items ?? [])
+
+// Order calculations from composable
+const {
+  total,
+  totalMargin,
+  totalMarginAmount,
+  calculateMargin: calculateItemMargin,
+  getMarginClass,
+  getTotalMarginClass,
+} = useOrderMargin(orderItems)
 
 const canMarkPaid = computed(() => order.value?.status === 'PENDING')
 const canMarkShipped = computed(() => order.value?.status === 'PAID')
@@ -208,38 +217,75 @@ onMounted(loadOrder)
               class="back-button"
             />
             <div class="order-info">
-              <h2 class="order-number">Pedido #{{ order.number }}</h2>
+              <div class="title-row">
+                <h2 class="order-number">Pedido #{{ order.number }}</h2>
+                <Tag
+                  :value="labels.status[order.status as keyof typeof labels.status]"
+                  :severity="getStatusSeverity(order.status)"
+                  class="status-tag"
+                />
+              </div>
               <span class="order-date">{{ formatDate(order.createdAt) }}</span>
             </div>
           </div>
           <div class="header-right">
-            <div class="header-buttons">
+            <div class="action-buttons" v-if="canMarkPaid || canMarkShipped || canMarkDelivered || canCancel">
               <Button
-                icon="pi pi-file-pdf"
-                :label="labels.orders.downloadPdf"
+                v-if="canMarkPaid"
+                :label="labels.orders.markAsPaid"
+                icon="pi pi-dollar"
+                severity="info"
+                :loading="updating"
+                @click="updateStatus('PAID')"
+              />
+              <Button
+                v-if="canMarkShipped"
+                :label="labels.orders.markAsShipped"
+                icon="pi pi-send"
+                severity="secondary"
+                :loading="updating"
+                @click="updateStatus('SHIPPED')"
+              />
+              <Button
+                v-if="canMarkDelivered"
+                :label="labels.orders.markAsDelivered"
+                icon="pi pi-check-circle"
+                severity="success"
+                :loading="updating"
+                @click="updateStatus('DELIVERED')"
+              />
+              <Button
+                v-if="canCancel"
+                icon="pi pi-times"
                 severity="danger"
                 outlined
+                :loading="updating"
+                v-tooltip.bottom="labels.orders.cancelOrder"
+                @click="confirmCancel"
+              />
+            </div>
+            <div class="utility-buttons">
+              <Button
+                icon="pi pi-file-pdf"
+                severity="danger"
+                outlined
+                v-tooltip.bottom="labels.orders.downloadPdf"
                 @click="generateOrderPdf(order!)"
               />
               <Button
                 icon="pi pi-copy"
-                :label="labels.orders.copyMessage"
                 severity="secondary"
                 outlined
+                v-tooltip.bottom="labels.orders.copyMessage"
                 @click="copyToClipboard"
               />
               <Button
-                icon="pi pi-comments"
-                :label="labels.orders.sendWhatsApp"
+                icon="pi pi-whatsapp"
                 severity="success"
+                v-tooltip.bottom="labels.orders.sendWhatsApp"
                 @click="openWhatsApp"
               />
             </div>
-            <Tag
-              :value="labels.status[order.status as keyof typeof labels.status]"
-              :severity="getStatusSeverity(order.status)"
-              class="status-tag"
-            />
           </div>
         </div>
       </template>
@@ -306,19 +352,28 @@ onMounted(loadOrder)
             </template>
           </Column>
 
-          <Column :header="labels.fields.price" style="width: 120px">
+          <Column :header="labels.fields.price" style="width: 100px">
             <template #body="{ data }">
               {{ formatCurrency(data.unitPrice) }}
             </template>
           </Column>
 
-          <Column :header="labels.fields.quantity" style="width: 100px">
+          <Column header="Margen" style="width: 80px">
+            <template #body="{ data }">
+              <span v-if="data.product.costPrice" class="margin-badge" :class="getMarginClass(data)">
+                {{ calculateItemMargin(data) }}%
+              </span>
+              <span v-else class="text-muted">-</span>
+            </template>
+          </Column>
+
+          <Column :header="labels.fields.quantity" style="width: 80px">
             <template #body="{ data }">
               {{ data.quantity }}
             </template>
           </Column>
 
-          <Column :header="labels.orders.subtotal" style="width: 120px">
+          <Column :header="labels.orders.subtotal" style="width: 100px">
             <template #body="{ data }">
               {{ formatCurrency(data.unitPrice * data.quantity) }}
             </template>
@@ -326,8 +381,16 @@ onMounted(loadOrder)
         </DataTable>
 
         <div class="total-row">
-          <span class="total-label">{{ labels.fields.total }}:</span>
-          <span class="total-value">{{ formatCurrency(total) }}</span>
+          <div class="total-margin" v-if="totalMargin !== null">
+            <span class="margin-label">Margen:</span>
+            <span class="margin-badge" :class="getTotalMarginClass()">
+              {{ formatCurrency(totalMarginAmount!) }} ({{ totalMargin.toFixed(0) }}%)
+            </span>
+          </div>
+          <div class="total-amount">
+            <span class="total-label">{{ labels.fields.total }}:</span>
+            <span class="total-value">{{ formatCurrency(total) }}</span>
+          </div>
         </div>
       </template>
     </Card>
@@ -339,50 +402,6 @@ onMounted(loadOrder)
       </template>
       <template #content>
         <p class="notes-text">{{ order.notes }}</p>
-      </template>
-    </Card>
-
-    <!-- Actions -->
-    <Card v-if="canMarkPaid || canMarkShipped || canMarkDelivered || canCancel" class="actions-card">
-      <template #title>
-        {{ labels.fields.actions }}
-      </template>
-      <template #content>
-        <div class="action-buttons">
-          <Button
-            v-if="canMarkPaid"
-            :label="labels.orders.markAsPaid"
-            icon="pi pi-dollar"
-            severity="info"
-            :loading="updating"
-            @click="updateStatus('PAID')"
-          />
-          <Button
-            v-if="canMarkShipped"
-            :label="labels.orders.markAsShipped"
-            icon="pi pi-send"
-            severity="secondary"
-            :loading="updating"
-            @click="updateStatus('SHIPPED')"
-          />
-          <Button
-            v-if="canMarkDelivered"
-            :label="labels.orders.markAsDelivered"
-            icon="pi pi-check-circle"
-            severity="success"
-            :loading="updating"
-            @click="updateStatus('DELIVERED')"
-          />
-          <Button
-            v-if="canCancel"
-            :label="labels.orders.cancelOrder"
-            icon="pi pi-times"
-            severity="danger"
-            outlined
-            :loading="updating"
-            @click="confirmCancel"
-          />
-        </div>
       </template>
     </Card>
   </div>
@@ -422,6 +441,13 @@ onMounted(loadOrder)
 .order-info {
   display: flex;
   flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.title-row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
 }
 
 .order-number {
@@ -429,6 +455,10 @@ onMounted(loadOrder)
   font-size: 1.5rem;
   font-weight: 700;
   color: var(--color-text);
+}
+
+.status-tag {
+  font-size: 0.85rem;
 }
 
 .order-date {
@@ -442,14 +472,14 @@ onMounted(loadOrder)
   gap: var(--spacing-md);
 }
 
-.header-buttons {
+.action-buttons {
   display: flex;
   gap: var(--spacing-sm);
 }
 
-.status-tag {
-  font-size: 1rem;
-  padding: 0.5rem 1rem;
+.utility-buttons {
+  display: flex;
+  gap: var(--spacing-xs);
 }
 
 .customer-info {
@@ -511,14 +541,58 @@ onMounted(loadOrder)
   color: var(--color-text-muted);
 }
 
+.margin-badge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.margin-high {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.margin-medium {
+  background-color: #fef9c3;
+  color: #854d0e;
+}
+
+.margin-low {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.text-muted {
+  color: var(--color-text-muted);
+}
+
 .total-row {
   display: flex;
   justify-content: flex-end;
   align-items: center;
-  gap: var(--spacing-md);
+  gap: var(--spacing-xl);
   padding: var(--spacing-md);
   background-color: #f8fafc;
   border-radius: var(--border-radius);
+}
+
+.total-margin {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.margin-label {
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+
+.total-amount {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
 }
 
 .total-label {
@@ -561,25 +635,22 @@ onMounted(loadOrder)
 
   .header-right {
     width: 100%;
-    flex-direction: column-reverse;
-    align-items: flex-start;
-  }
-
-  .header-buttons {
-    width: 100%;
-    flex-wrap: wrap;
-  }
-
-  .header-buttons button {
-    flex: 1;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--spacing-sm);
   }
 
   .action-buttons {
-    flex-direction: column;
+    flex-wrap: wrap;
   }
 
   .action-buttons button {
-    width: 100%;
+    flex: 1;
+    min-width: fit-content;
+  }
+
+  .utility-buttons {
+    justify-content: flex-start;
   }
 }
 </style>

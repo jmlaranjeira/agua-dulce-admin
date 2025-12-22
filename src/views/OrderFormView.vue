@@ -18,6 +18,7 @@ import InputIcon from 'primevue/inputicon'
 import ImageThumbnail from '@/components/ImageThumbnail.vue'
 import { api } from '@/services/api'
 import { labels } from '@/locales/es'
+import { useOrderMargin } from '@/composables/useOrderMargin'
 import type { Customer, Product, CreateOrder, CreateCustomer, CustomerAddress, Category } from '@/types'
 
 type OrderItemForm = {
@@ -71,9 +72,15 @@ const customerOptions = computed(() =>
   }))
 )
 
-const total = computed(() =>
-  orderItems.value.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0)
-)
+// Order calculations from composable
+const {
+  total,
+  totalMargin,
+  totalMarginAmount,
+  calculateMargin,
+  getMarginClass,
+  getTotalMarginClass,
+} = useOrderMargin(orderItems)
 
 const categoryOptions = computed(() => [
   { name: labels.products.allCategories, id: null },
@@ -204,20 +211,6 @@ function formatCurrency(value: number): string {
     style: 'currency',
     currency: 'EUR',
   }).format(value)
-}
-
-function calculateMargin(item: OrderItemForm): string {
-  if (!item.product.costPrice) return '0'
-  const margin = ((item.unitPrice - item.product.costPrice) / item.unitPrice) * 100
-  return margin.toFixed(0)
-}
-
-function getMarginClass(item: OrderItemForm): string {
-  if (!item.product.costPrice) return ''
-  const margin = ((item.unitPrice - item.product.costPrice) / item.unitPrice) * 100
-  if (margin >= 40) return 'margin-high'
-  if (margin >= 20) return 'margin-medium'
-  return 'margin-low'
 }
 
 function validateCustomer(): boolean {
@@ -505,8 +498,16 @@ onMounted(() => {
             </DataTable>
 
             <div class="total-row" v-if="orderItems.length > 0">
-              <span class="total-label">{{ labels.fields.total }}:</span>
-              <span class="total-value">{{ formatCurrency(total) }}</span>
+              <div class="total-margin" v-if="totalMargin !== null">
+                <span class="total-margin-label">Margen:</span>
+                <span class="margin-badge" :class="getTotalMarginClass()">
+                  {{ formatCurrency(totalMarginAmount!) }} ({{ totalMargin.toFixed(0) }}%)
+                </span>
+              </div>
+              <div class="total-amount">
+                <span class="total-label">{{ labels.fields.total }}:</span>
+                <span class="total-value">{{ formatCurrency(total) }}</span>
+              </div>
             </div>
           </div>
 
@@ -820,11 +821,28 @@ onMounted(() => {
   display: flex;
   justify-content: flex-end;
   align-items: center;
-  gap: var(--spacing-md);
+  gap: var(--spacing-xl);
   padding: var(--spacing-md);
   background-color: #f8fafc;
   border-radius: var(--border-radius);
   margin-top: var(--spacing-sm);
+}
+
+.total-margin {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.total-margin-label {
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+
+.total-amount {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
 }
 
 .total-label {
