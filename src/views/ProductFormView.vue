@@ -6,7 +6,7 @@ import Card from 'primevue/card'
 import InputText from 'primevue/inputtext'
 import InputNumber from 'primevue/inputnumber'
 import Select from 'primevue/select'
-import Checkbox from 'primevue/checkbox'
+import InputSwitch from 'primevue/inputswitch'
 import Button from 'primevue/button'
 import ImageUpload from '@/components/ImageUpload.vue'
 import { api } from '@/services/api'
@@ -51,6 +51,13 @@ const margin = computed(() => {
   if (form.value.costPrice && form.value.priceRetail) {
     const marginValue = ((form.value.priceRetail - form.value.costPrice) / form.value.priceRetail) * 100
     return marginValue.toFixed(1)
+  }
+  return null
+})
+
+const marginAmount = computed(() => {
+  if (form.value.costPrice && form.value.priceRetail) {
+    return (form.value.priceRetail - form.value.costPrice).toFixed(2)
   }
   return null
 })
@@ -173,119 +180,119 @@ onMounted(loadData)
     <Card>
       <template #content>
         <form @submit.prevent="save" class="form">
-          <div class="form-row">
-            <div class="form-field">
-              <label for="code">{{ labels.fields.code }} *</label>
-              <InputText
-                id="code"
-                v-model="form.code"
-                :class="{ 'p-invalid': errors.code }"
-                :disabled="loading"
-              />
-              <small v-if="errors.code" class="p-error">{{ errors.code }}</small>
-            </div>
-
-            <div class="form-field">
-              <label for="name">{{ labels.fields.name }} *</label>
-              <InputText
-                id="name"
-                v-model="form.name"
-                :class="{ 'p-invalid': errors.name }"
-                :disabled="loading"
-              />
-              <small v-if="errors.name" class="p-error">{{ errors.name }}</small>
+          <!-- Toggle Active - Top Right (edit mode only) -->
+          <div v-if="isEditMode" class="form-header">
+            <div class="active-toggle">
+              <label for="isActive">{{ labels.products.active }}</label>
+              <InputSwitch id="isActive" v-model="form.isActive" :disabled="loading" />
             </div>
           </div>
 
-          <div class="form-row form-row-prices">
-            <div class="form-field">
-              <label for="priceRetail">{{ labels.fields.priceRetail }} *</label>
-              <InputNumber
-                id="priceRetail"
-                v-model="form.priceRetail"
-                mode="currency"
-                currency="EUR"
-                locale="es-ES"
-                :class="{ 'p-invalid': errors.priceRetail }"
-                :disabled="loading"
-              />
-              <small v-if="errors.priceRetail" class="p-error">{{ errors.priceRetail }}</small>
+          <!-- Section 1: Image + Basic Info (50/50) -->
+          <div class="product-main">
+            <div class="product-image-col">
+              <ImageUpload v-model="form.imageUrl" folder="products" />
             </div>
+            <div class="product-info-col">
+              <div class="form-field">
+                <label for="code">{{ labels.fields.code }} *</label>
+                <InputText
+                  id="code"
+                  v-model="form.code"
+                  :class="{ 'p-invalid': errors.code }"
+                  :disabled="loading"
+                />
+                <small v-if="errors.code" class="p-error">{{ errors.code }}</small>
+              </div>
 
-            <div class="form-field">
-              <label for="priceWholesale">{{ labels.fields.priceWholesale }}</label>
-              <InputNumber
-                id="priceWholesale"
-                v-model="form.priceWholesale"
-                mode="currency"
-                currency="EUR"
-                locale="es-ES"
-                :disabled="loading"
-              />
-            </div>
+              <div class="form-field">
+                <label for="name">{{ labels.fields.name }} *</label>
+                <InputText
+                  id="name"
+                  v-model="form.name"
+                  :class="{ 'p-invalid': errors.name }"
+                  :disabled="loading"
+                />
+                <small v-if="errors.name" class="p-error">{{ errors.name }}</small>
+              </div>
 
-            <div class="form-field">
-              <label for="costPrice">{{ labels.fields.costPrice }}</label>
-              <InputNumber
-                id="costPrice"
-                v-model="form.costPrice"
-                mode="currency"
-                currency="EUR"
-                locale="es-ES"
-                :disabled="loading"
-              />
-            </div>
-          </div>
+              <div class="form-field">
+                <label for="category">{{ labels.fields.category }}</label>
+                <Select
+                  id="category"
+                  v-model="form.categoryId"
+                  :options="categoryOptions"
+                  optionLabel="name"
+                  optionValue="id"
+                  :placeholder="labels.products.selectCategory"
+                  :disabled="loading"
+                  showClear
+                  class="w-full"
+                />
+              </div>
 
-          <div v-if="margin !== null" class="margin-display">
-            {{ labels.products.margin }}: <strong>{{ margin }}%</strong>
-          </div>
-
-          <div class="form-row">
-            <div class="form-field">
-              <label for="supplier">{{ labels.fields.supplier }}</label>
-              <Select
-                id="supplier"
-                v-model="form.supplierId"
-                :options="supplierOptions"
-                optionLabel="label"
-                optionValue="value"
-                :placeholder="labels.products.noSupplier"
-                :disabled="loading"
-                showClear
-                class="w-full"
-              />
-            </div>
-
-            <div class="form-field">
-              <label for="category">{{ labels.fields.category }}</label>
-              <Select
-                id="category"
-                v-model="form.categoryId"
-                :options="categoryOptions"
-                optionLabel="name"
-                optionValue="id"
-                :placeholder="labels.products.selectCategory"
-                :disabled="loading"
-                showClear
-                class="w-full"
-              />
+              <div class="form-field">
+                <label for="supplier">{{ labels.fields.supplier }}</label>
+                <Select
+                  id="supplier"
+                  v-model="form.supplierId"
+                  :options="supplierOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  :placeholder="labels.products.noSupplier"
+                  :disabled="loading"
+                  showClear
+                  class="w-full"
+                />
+              </div>
             </div>
           </div>
 
-          <div class="form-field">
-            <label>{{ labels.products.imageUrl }}</label>
-            <ImageUpload v-model="form.imageUrl" folder="products" />
-          </div>
+          <!-- Section 2: Pricing (3-col) + Margin -->
+          <div class="product-pricing">
+            <div class="price-row">
+              <div class="form-field">
+                <label for="costPrice">{{ labels.fields.costPrice }}</label>
+                <InputNumber
+                  id="costPrice"
+                  v-model="form.costPrice"
+                  mode="currency"
+                  currency="EUR"
+                  locale="es-ES"
+                  :disabled="loading"
+                />
+              </div>
 
-          <div v-if="isEditMode" class="form-field form-field-checkbox">
-            <Checkbox
-              id="isActive"
-              v-model="form.isActive"
-              :binary="true"
-              :disabled="loading"
-            />
-            <label for="isActive">{{ labels.products.active }}</label>
+              <div class="form-field">
+                <label for="priceRetail">{{ labels.fields.priceRetail }} *</label>
+                <InputNumber
+                  id="priceRetail"
+                  v-model="form.priceRetail"
+                  mode="currency"
+                  currency="EUR"
+                  locale="es-ES"
+                  :class="{ 'p-invalid': errors.priceRetail }"
+                  :disabled="loading"
+                />
+                <small v-if="errors.priceRetail" class="p-error">{{ errors.priceRetail }}</small>
+              </div>
+
+              <div class="form-field">
+                <label for="priceWholesale">{{ labels.fields.priceWholesale }}</label>
+                <InputNumber
+                  id="priceWholesale"
+                  v-model="form.priceWholesale"
+                  mode="currency"
+                  currency="EUR"
+                  locale="es-ES"
+                  :disabled="loading"
+                />
+              </div>
+            </div>
+
+            <div v-if="margin !== null" class="margin-display">
+              {{ labels.products.margin }}: <strong>€{{ marginAmount }} ({{ margin }}%)</strong>
+            </div>
           </div>
 
           <div class="form-actions">
@@ -321,14 +328,49 @@ onMounted(loadData)
   gap: var(--spacing-lg);
 }
 
-.form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--spacing-lg);
+.form-header {
+  display: flex;
+  justify-content: flex-end;
 }
 
-.form-row-prices {
+.active-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.active-toggle label {
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.product-main {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-xl);
+}
+
+.product-image-col {
+  display: flex;
+  align-items: flex-start;
+}
+
+.product-info-col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.product-pricing {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.price-row {
+  display: grid;
   grid-template-columns: 1fr 1fr 1fr;
+  gap: var(--spacing-lg);
 }
 
 .form-field {
@@ -346,16 +388,6 @@ onMounted(loadData)
 .form-field :deep(.p-inputnumber),
 .form-field :deep(.p-select) {
   width: 100%;
-}
-
-.form-field-checkbox {
-  flex-direction: row;
-  align-items: center;
-  gap: var(--spacing-sm);
-}
-
-.form-field-checkbox label {
-  font-weight: 400;
 }
 
 .margin-display {
@@ -381,8 +413,11 @@ onMounted(loadData)
 }
 
 @media (max-width: 768px) {
-  .form-row,
-  .form-row-prices {
+  .product-main {
+    grid-template-columns: 1fr;
+  }
+
+  .price-row {
     grid-template-columns: 1fr;
   }
 }

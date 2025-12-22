@@ -83,7 +83,8 @@ onMounted(loadCustomers)
           :rowsPerPageOptions="[10, 25, 50]"
           stripedRows
           rowHover
-          class="customers-table"
+          scrollable
+          class="customers-table table-responsive"
           @row-click="(e) => goToEdit(e.data.id)"
         >
           <template #empty>

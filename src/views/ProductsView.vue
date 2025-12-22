@@ -199,7 +199,8 @@ onMounted(loadData)
           :rowsPerPageOptions="[10, 25, 50]"
           stripedRows
           rowHover
-          class="products-table"
+          scrollable
+          class="products-table table-responsive"
         >
           <template #empty>
             <div class="empty-message">

@@ -13,10 +13,12 @@ import Column from 'primevue/column'
 import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
 import Tag from 'primevue/tag'
+import IconField from 'primevue/iconfield'
+import InputIcon from 'primevue/inputicon'
 import ImageThumbnail from '@/components/ImageThumbnail.vue'
 import { api } from '@/services/api'
 import { labels } from '@/locales/es'
-import type { Customer, Product, CreateOrder, CreateCustomer, CustomerAddress } from '@/types'
+import type { Customer, Product, CreateOrder, CreateCustomer, CustomerAddress, Category } from '@/types'
 
 type OrderItemForm = {
   product: Product
@@ -56,6 +58,12 @@ const customerErrors = ref<Record<string, string>>({})
 const customerAddresses = ref<CustomerAddress[]>([])
 const selectedShippingAddressId = ref<string | null>(null)
 
+// Product search modal
+const categories = ref<Category[]>([])
+const showProductModal = ref(false)
+const modalSearchQuery = ref('')
+const modalCategoryFilter = ref<string | null>(null)
+
 const customerOptions = computed(() =>
   customers.value.map((c) => ({
     ...c,
@@ -66,6 +74,30 @@ const customerOptions = computed(() =>
 const total = computed(() =>
   orderItems.value.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0)
 )
+
+const categoryOptions = computed(() => [
+  { name: labels.products.allCategories, id: null },
+  ...[...categories.value].sort((a, b) => a.order - b.order),
+])
+
+const filteredModalProducts = computed(() => {
+  let result = products.value
+
+  if (modalSearchQuery.value) {
+    const query = modalSearchQuery.value.toLowerCase()
+    result = result.filter(
+      (p) =>
+        p.name.toLowerCase().includes(query) ||
+        p.code.toLowerCase().includes(query)
+    )
+  }
+
+  if (modalCategoryFilter.value) {
+    result = result.filter((p) => p.categoryId === modalCategoryFilter.value)
+  }
+
+  return result
+})
 
 async function loadCustomers() {
   try {
@@ -80,6 +112,14 @@ async function loadProducts() {
     products.value = await api.products.list({ active: true })
   } catch (err) {
     console.error('Error loading products:', err)
+  }
+}
+
+async function loadCategories() {
+  try {
+    categories.value = await api.categories.list()
+  } catch (err) {
+    console.error('Error loading categories:', err)
   }
 }
 
@@ -137,6 +177,24 @@ function addItem() {
   quantity.value = 1
 }
 
+function addProductFromModal(product: Product) {
+  const existingItem = orderItems.value.find((item) => item.product.id === product.id)
+
+  if (existingItem) {
+    existingItem.quantity += 1
+  } else {
+    orderItems.value.push({
+      product,
+      quantity: 1,
+      unitPrice: product.priceRetail,
+    })
+  }
+
+  showProductModal.value = false
+  modalSearchQuery.value = ''
+  modalCategoryFilter.value = null
+}
+
 function removeItem(index: number) {
   orderItems.value.splice(index, 1)
 }
@@ -146,6 +204,20 @@ function formatCurrency(value: number): string {
     style: 'currency',
     currency: 'EUR',
   }).format(value)
+}
+
+function calculateMargin(item: OrderItemForm): string {
+  if (!item.product.costPrice) return '0'
+  const margin = ((item.unitPrice - item.product.costPrice) / item.unitPrice) * 100
+  return margin.toFixed(0)
+}
+
+function getMarginClass(item: OrderItemForm): string {
+  if (!item.product.costPrice) return ''
+  const margin = ((item.unitPrice - item.product.costPrice) / item.unitPrice) * 100
+  if (margin >= 40) return 'margin-high'
+  if (margin >= 20) return 'margin-medium'
+  return 'margin-low'
 }
 
 function validateCustomer(): boolean {
@@ -251,6 +323,7 @@ function cancel() {
 onMounted(() => {
   loadCustomers()
   loadProducts()
+  loadCategories()
 })
 </script>
 
@@ -316,36 +389,47 @@ onMounted(() => {
           <div class="form-section">
             <label>{{ labels.pages.products }}</label>
             <div class="product-row">
-              <AutoComplete
-                v-model="selectedProduct"
-                :suggestions="filteredProducts"
-                optionLabel="name"
-                :placeholder="labels.orders.selectProduct"
-                @complete="searchProducts"
-                class="product-search"
-                :disabled="loading"
-              >
-                <template #option="{ option }">
-                  <div class="product-option">
-                    <span class="product-code">{{ option.code }}</span>
-                    <span class="product-name">{{ option.name }}</span>
-                    <span class="product-price">{{ formatCurrency(option.priceRetail) }}</span>
-                  </div>
-                </template>
-              </AutoComplete>
-              <InputNumber
-                v-model="quantity"
-                :min="1"
-                :max="99"
-                showButtons
-                class="quantity-input"
-              />
-              <Button
-                icon="pi pi-plus"
-                :label="labels.orders.addProduct"
-                @click="addItem"
-                :disabled="!selectedProduct"
-              />
+              <div class="product-search-group">
+                <AutoComplete
+                  v-model="selectedProduct"
+                  :suggestions="filteredProducts"
+                  optionLabel="name"
+                  :placeholder="labels.orders.selectProduct"
+                  @complete="searchProducts"
+                  class="product-autocomplete"
+                  :disabled="loading"
+                >
+                  <template #option="{ option }">
+                    <div class="product-option">
+                      <span class="product-code">{{ option.code }}</span>
+                      <span class="product-name">{{ option.name }}</span>
+                      <span class="product-price">{{ formatCurrency(option.priceRetail) }}</span>
+                    </div>
+                  </template>
+                </AutoComplete>
+                <Button
+                  icon="pi pi-search"
+                  severity="secondary"
+                  outlined
+                  v-tooltip.top="'Buscar productos'"
+                  @click="showProductModal = true"
+                />
+              </div>
+              <div class="product-add-group">
+                <InputNumber
+                  v-model="quantity"
+                  :min="1"
+                  :max="99"
+                  showButtons
+                  class="quantity-input"
+                />
+                <Button
+                  icon="pi pi-plus"
+                  :label="labels.orders.addProduct"
+                  @click="addItem"
+                  :disabled="!selectedProduct"
+                />
+              </div>
             </div>
           </div>
 
@@ -373,25 +457,41 @@ onMounted(() => {
                 </template>
               </Column>
 
-              <Column field="unitPrice" :header="labels.fields.price">
+              <Column field="unitPrice" :header="labels.fields.price" style="width: 100px">
                 <template #body="{ data }">
                   {{ formatCurrency(data.unitPrice) }}
                 </template>
               </Column>
 
-              <Column field="quantity" :header="labels.fields.quantity" style="width: 100px">
+              <Column header="Margen" style="width: 90px">
                 <template #body="{ data }">
-                  {{ data.quantity }}
+                  <span v-if="data.product.costPrice" class="margin-badge" :class="getMarginClass(data)">
+                    {{ calculateMargin(data) }}%
+                  </span>
+                  <span v-else class="text-muted">-</span>
                 </template>
               </Column>
 
-              <Column :header="labels.orders.subtotal" style="width: 120px">
+              <Column field="quantity" :header="labels.fields.quantity" style="width: 130px">
+                <template #body="{ data }">
+                  <InputNumber
+                    v-model="data.quantity"
+                    :min="1"
+                    :max="99"
+                    showButtons
+                    buttonLayout="stacked"
+                    class="quantity-edit"
+                  />
+                </template>
+              </Column>
+
+              <Column :header="labels.orders.subtotal" style="width: 100px">
                 <template #body="{ data }">
                   {{ formatCurrency(data.unitPrice * data.quantity) }}
                 </template>
               </Column>
 
-              <Column style="width: 60px">
+              <Column style="width: 50px">
                 <template #body="{ index }">
                   <Button
                     icon="pi pi-trash"
@@ -497,6 +597,74 @@ onMounted(() => {
         />
       </template>
     </Dialog>
+
+    <!-- Product Search Modal -->
+    <Dialog
+      v-model:visible="showProductModal"
+      header="Buscar Producto"
+      modal
+      :style="{ width: '90vw', maxWidth: '800px' }"
+      class="product-search-modal"
+    >
+      <div class="modal-filters">
+        <IconField class="modal-search">
+          <InputIcon class="pi pi-search" />
+          <InputText
+            v-model="modalSearchQuery"
+            placeholder="Buscar por nombre o código..."
+            class="w-full"
+          />
+        </IconField>
+        <Select
+          v-model="modalCategoryFilter"
+          :options="categoryOptions"
+          optionLabel="name"
+          optionValue="id"
+          :placeholder="labels.products.allCategories"
+          class="modal-category-filter"
+        />
+      </div>
+
+      <DataTable
+        :value="filteredModalProducts"
+        paginator
+        :rows="5"
+        class="modal-products-table"
+        scrollable
+        scrollHeight="400px"
+      >
+        <template #empty>
+          <div class="empty-message">{{ labels.messages.noResults }}</div>
+        </template>
+
+        <Column header="" style="width: 60px">
+          <template #body="{ data }">
+            <ImageThumbnail :src="data.imageUrl" :size="40" :preview-size="150" />
+          </template>
+        </Column>
+
+        <Column field="code" header="Código" style="width: 100px" />
+
+        <Column field="name" header="Nombre" />
+
+        <Column field="priceRetail" header="Precio" style="width: 100px">
+          <template #body="{ data }">
+            {{ formatCurrency(data.priceRetail) }}
+          </template>
+        </Column>
+
+        <Column header="" style="width: 100px">
+          <template #body="{ data }">
+            <Button
+              icon="pi pi-plus"
+              label="Añadir"
+              size="small"
+              @click="addProductFromModal(data)"
+            />
+          </template>
+        </Column>
+      </DataTable>
+    </Dialog>
   </div>
 </template>
 
@@ -538,12 +706,36 @@ onMounted(() => {
   align-items: center;
 }
 
-.product-search {
+.product-search-group {
+  display: flex;
+  gap: var(--spacing-xs);
+  align-items: center;
   flex: 1;
+  min-width: 0;
+}
+
+.product-autocomplete {
+  flex: 1;
+  min-width: 0;
+}
+
+.product-autocomplete :deep(input) {
+  width: 100%;
+}
+
+.product-add-group {
+  display: flex;
+  gap: var(--spacing-sm);
+  align-items: center;
+  flex-shrink: 0;
 }
 
 .quantity-input {
-  width: 100px;
+  width: 90px;
+}
+
+.quantity-input :deep(input) {
+  width: 100%;
 }
 
 .product-option {
@@ -585,6 +777,42 @@ onMounted(() => {
 
 .item-code {
   font-size: 0.85em;
+  color: var(--color-text-muted);
+}
+
+.margin-badge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.margin-high {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.margin-medium {
+  background-color: #fef9c3;
+  color: #854d0e;
+}
+
+.margin-low {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.quantity-edit {
+  width: 100%;
+}
+
+.quantity-edit :deep(input) {
+  width: 100%;
+  text-align: center;
+}
+
+.text-muted {
   color: var(--color-text-muted);
 }
 
@@ -665,19 +893,71 @@ onMounted(() => {
   color: var(--color-text-secondary, #64748b);
 }
 
+/* Product Search Modal */
+.modal-filters {
+  display: flex;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+}
+
+.modal-search {
+  flex: 1;
+}
+
+.modal-search :deep(input) {
+  width: 100%;
+}
+
+.modal-category-filter {
+  min-width: 200px;
+}
+
+.modal-products-table {
+  margin-top: var(--spacing-sm);
+}
+
+.empty-message {
+  text-align: center;
+  padding: var(--spacing-xl);
+  color: var(--color-text-muted);
+}
+
 @media (max-width: 768px) {
-  .customer-row,
-  .product-row {
+  .customer-row {
     flex-direction: column;
     align-items: stretch;
   }
 
-  .customer-select,
-  .product-search {
+  .customer-select {
     width: 100%;
   }
 
-  .quantity-input {
+  .product-row {
+    flex-wrap: wrap;
+  }
+
+  .product-search-group {
+    flex: 1 1 100%;
+  }
+
+  .product-add-group {
+    flex: 1 1 100%;
+  }
+
+  .product-add-group .quantity-input {
+    flex: 1;
+    width: auto;
+  }
+
+  .product-add-group button {
+    flex: 1;
+  }
+
+  .modal-filters {
+    flex-direction: column;
+  }
+
+  .modal-category-filter {
     width: 100%;
   }
 }

@@ -53,3 +53,15 @@
   white-space: nowrap;
   border: 0;
 }
+
+/* Responsive DataTable */
+@media (max-width: 768px) {
+  .table-responsive :deep(.p-datatable-table-container) {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .table-responsive :deep(.p-datatable-table) {
+    min-width: 600px;
+  }
+}

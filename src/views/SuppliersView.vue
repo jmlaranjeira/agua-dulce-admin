@@ -110,7 +110,8 @@ onMounted(loadSuppliers)
           :rowsPerPageOptions="[10, 25, 50]"
           stripedRows
           rowHover
-          class="suppliers-table"
+          scrollable
+          class="suppliers-table table-responsive"
         >
           <template #empty>
             <div class="empty-message">

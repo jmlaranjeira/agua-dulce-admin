@@ -204,7 +204,8 @@ onMounted(() => {
           :rowsPerPageOptions="[10, 25, 50]"
           stripedRows
           rowHover
-          class="orders-table"
+          scrollable
+          class="orders-table table-responsive"
           @row-click="(e) => goToDetail(e.data.id)"
         >
           <template #empty>
