@@ -14,6 +14,7 @@ import Checkbox from 'primevue/checkbox'
 import Tag from 'primevue/tag'
 import ProgressSpinner from 'primevue/progressspinner'
 import Dialog from 'primevue/dialog'
+import FileUpload from 'primevue/fileupload'
 import ImageThumbnail from '@/components/ImageThumbnail.vue'
 import { api } from '@/services/api'
 import { labels } from '@/locales/es'
@@ -23,6 +24,7 @@ import type {
   ProductToImport,
   Supplier,
   Category,
+  InvoicePreviewItem,
 } from '@/types'
 
 const router = useRouter()
@@ -59,6 +61,9 @@ const products = ref<ProductToImport[]>([])
 // Custom margin dialog
 const showMarginDialog = ref(false)
 const customMargin = ref(2)
+
+// Invoice parsing state
+const parsingInvoice = ref(false)
 
 // Steps configuration
 const stepItems = computed(() => [
@@ -101,11 +106,16 @@ const selectedProducts = computed(() =>
 // Count of selected products
 const selectedCount = computed(() => selectedProducts.value.length)
 
+// Check if source is invoice
+const isInvoiceSource = computed(() => selectedSource.value?.id === 'rainbow-invoice')
+
 // Validation for step progression
 const canProceedStep1 = computed(() => !!selectedSource.value)
-const canProceedStep2 = computed(
-  () => searchQuery.value.trim().length > 0 || !!selectedType.value
-)
+const canProceedStep2 = computed(() => {
+  // Invoice source doesn't need validation in step 2
+  if (isInvoiceSource.value) return true
+  return searchQuery.value.trim().length > 0 || !!selectedType.value
+})
 const canProceedStep3 = computed(() => {
   if (selectedCount.value === 0) return false
   return selectedProducts.value.every((p) => p.priceRetail && p.priceRetail > 0)
@@ -227,6 +237,74 @@ async function loadMoreProducts() {
     })
   } finally {
     loadingMore.value = false
+  }
+}
+
+// Transform invoice preview item to ProductToImport
+function mapInvoiceItemToProduct(item: InvoicePreviewItem): ProductToImport {
+  return {
+    externalId: item.code,
+    code: item.code,
+    name: item.name,
+    productType: item.productType,
+    costPriceRaw: item.costPrice,
+    costPrice: item.costPrice,
+    weightGrams: item.parsedData.weight,
+    metalType: 'Silver',
+    size: '',
+    stockQty: item.parsedData.quantity,
+    tags: [],
+    notes: item.foundInApi ? '' : 'Importado desde PDF',
+    imageUrl: item.imageUrl || '',
+    suggestedCategoryId: item.suggestedCategoryId,
+    exists: item.exists,
+    selected: !item.exists,
+    priceRetail: item.suggestedRetailPrice,
+    priceWholesale: item.suggestedWholesalePrice,
+  }
+}
+
+// Handle invoice file upload
+async function onInvoiceSelect(event: { files: File[] }) {
+  const file = event.files[0]
+  if (!file) return
+
+  parsingInvoice.value = true
+  try {
+    const response = await api.import.parseInvoice(file)
+
+    // Transform to ProductToImport format
+    products.value = response.items.map(mapInvoiceItemToProduct)
+    hasMorePages.value = false
+
+    // Set suggested supplier if not already selected
+    if (!selectedSupplier.value && response.suggestedSupplierId) {
+      selectedSupplier.value = response.suggestedSupplierId
+    }
+
+    // Show summary
+    const summary = labels.import.invoiceSummary
+      .replace('{total}', String(response.summary.total))
+      .replace('{found}', String(response.summary.found))
+      .replace('{existing}', String(response.summary.existing))
+
+    toast.add({
+      severity: 'info',
+      summary: 'Factura procesada',
+      detail: summary,
+      life: 5000,
+    })
+
+    nextStep()
+  } catch (err) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: err instanceof Error ? err.message : labels.messages.errorGeneric,
+      life: 5000,
+    })
+  } finally {
+    parsingInvoice.value = false
   }
 }
 
@@ -392,7 +470,15 @@ onMounted(loadData)
                 @click="selectSource(source)"
               >
                 <div class="source-icon">
-                  <i :class="source.id === 'rainbow-silver' ? 'pi pi-globe' : 'pi pi-file'" />
+                  <i
+                    :class="
+                      source.id === 'rainbow-silver'
+                        ? 'pi pi-globe'
+                        : source.id === 'rainbow-invoice'
+                          ? 'pi pi-file-pdf'
+                          : 'pi pi-file'
+                    "
+                  />
                 </div>
                 <h3 class="source-name">{{ source.name }}</h3>
                 <div v-if="source.productTypes?.length" class="source-types">
@@ -415,9 +501,45 @@ onMounted(loadData)
             </div>
           </div>
 
-          <!-- Step 2: Search Products -->
+          <!-- Step 2: Search Products or Upload Invoice -->
           <div v-else-if="currentStep === 1" class="step-panel">
-            <div class="search-form">
+            <!-- Invoice upload (when source is rainbow-invoice) -->
+            <div v-if="isInvoiceSource" class="invoice-upload-section">
+              <!-- Supplier selection first -->
+              <div class="form-field">
+                <label>{{ labels.import.targetSupplier }}</label>
+                <Select
+                  v-model="selectedSupplier"
+                  :options="supplierOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  :placeholder="labels.products.noSupplier"
+                  showClear
+                  class="w-full"
+                />
+              </div>
+
+              <!-- Invoice file upload -->
+              <div v-if="parsingInvoice" class="loading-container">
+                <ProgressSpinner />
+                <p>{{ labels.import.parsingInvoice }}</p>
+              </div>
+
+              <div v-else class="invoice-upload">
+                <FileUpload
+                  mode="basic"
+                  accept=".pdf"
+                  :maxFileSize="5000000"
+                  :auto="true"
+                  :chooseLabel="labels.import.uploadInvoice"
+                  @select="onInvoiceSelect"
+                />
+                <p class="upload-hint">{{ labels.import.invoiceEurOnly }}</p>
+              </div>
+            </div>
+
+            <!-- Search form (for other sources) -->
+            <div v-else class="search-form">
               <div class="form-field">
                 <label>{{ labels.import.searchText }}</label>
                 <InputText
@@ -531,7 +653,15 @@ onMounted(loadData)
 
               <Column field="code" :header="labels.fields.code" style="width: 200px" />
 
-              <Column field="name" :header="labels.fields.name" style="max-width: 150px" />
+              <Column :header="labels.fields.name" style="min-width: 200px">
+                <template #body="{ data }">
+                  <InputText
+                    v-model="data.name"
+                    :disabled="data.exists"
+                    class="name-input"
+                  />
+                </template>
+              </Column>
 
               <Column :header="labels.import.cost" style="width: 120px">
                 <template #body="{ data }">
@@ -829,6 +959,38 @@ onMounted(loadData)
   gap: var(--spacing-lg);
 }
 
+/* Invoice upload */
+.invoice-upload-section {
+  max-width: 500px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xl);
+}
+
+.invoice-upload {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-xl);
+  border: 2px dashed var(--color-border);
+  border-radius: var(--border-radius);
+  background: var(--p-surface-50, #fafafa);
+}
+
+.upload-hint {
+  color: var(--color-text-muted);
+  font-size: 0.9em;
+  margin: 0;
+}
+
+.invoice-options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
 .form-field {
   display: flex;
   flex-direction: column;
@@ -878,6 +1040,10 @@ onMounted(loadData)
 
 .products-table :deep(.row-disabled) td:first-child {
   pointer-events: auto;
+}
+
+.name-input {
+  width: 100%;
 }
 
 .price-input {

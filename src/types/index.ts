@@ -264,3 +264,41 @@ export type ImportResult = {
   skipped: number
   errors: Array<{ code: string; error: string }>
 }
+
+// =============================================
+// Invoice import types
+// =============================================
+export type ParsedInvoiceItem = {
+  lineNumber: number
+  itemCode: string
+  description: string
+  weight: number
+  quantity: number
+  unit: string
+  pricePerGram: number
+  totalAmount: number
+}
+
+export type InvoicePreviewItem = {
+  code: string
+  name: string
+  imageUrl: string | null
+  productType: string
+  costPrice: number
+  foundInApi: boolean
+  exists: boolean
+  suggestedRetailPrice: number
+  suggestedWholesalePrice: number
+  suggestedCategoryId: string | null
+  parsedData: ParsedInvoiceItem
+}
+
+export type InvoicePreviewResponse = {
+  items: InvoicePreviewItem[]
+  suggestedSupplierId: string
+  summary: {
+    total: number
+    found: number
+    existing: number
+  }
+}

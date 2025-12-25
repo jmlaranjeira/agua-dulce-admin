@@ -233,5 +233,14 @@ export const labels = {
     // Navigation
     next: 'Siguiente',
     previous: 'Anterior',
+
+    // Invoice import
+    uploadInvoice: 'Subir factura PDF',
+    dropInvoice: 'Arrastra el PDF aquí o haz clic para seleccionar',
+    invoiceEurOnly: 'Solo facturas en EUR (no BAHT)',
+    foundInApi: 'API',
+    notFoundInApi: 'PDF',
+    invoiceSummary: '{total} productos, {found} encontrados en API, {existing} ya existen',
+    parsingInvoice: 'Procesando factura...',
   },
 }
