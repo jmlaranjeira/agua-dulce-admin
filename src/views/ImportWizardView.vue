@@ -5,6 +5,7 @@ import { useToast } from 'primevue/usetoast'
 import Card from 'primevue/card'
 import Steps from 'primevue/steps'
 import Select from 'primevue/select'
+import InputText from 'primevue/inputtext'
 import InputNumber from 'primevue/inputnumber'
 import Button from 'primevue/button'
 import DataTable from 'primevue/datatable'
@@ -41,9 +42,16 @@ const categories = ref<Category[]>([])
 const selectedSource = ref<ImportSource | null>(null)
 
 // Step 2: Search
+const searchQuery = ref('')
 const selectedType = ref<string | null>(null)
 const selectedSupplier = ref<string | null>(null)
 const selectedCategory = ref<string | null>(null)
+
+// Pagination
+const PAGE_SIZE = 50
+const currentPage = ref(1)
+const hasMorePages = ref(false)
+const loadingMore = ref(false)
 
 // Step 3: Products
 const products = ref<ProductToImport[]>([])
@@ -95,7 +103,9 @@ const selectedCount = computed(() => selectedProducts.value.length)
 
 // Validation for step progression
 const canProceedStep1 = computed(() => !!selectedSource.value)
-const canProceedStep2 = computed(() => !!selectedType.value)
+const canProceedStep2 = computed(
+  () => searchQuery.value.trim().length > 0 || !!selectedType.value
+)
 const canProceedStep3 = computed(() => {
   if (selectedCount.value === 0) return false
   return selectedProducts.value.every((p) => p.priceRetail && p.priceRetail > 0)
@@ -145,26 +155,36 @@ function selectSource(source: ImportSource) {
   selectedSource.value = source
 }
 
+// Transform API response to ProductToImport
+function mapToProductToImport(p: ImportProductPreview): ProductToImport {
+  return {
+    ...p,
+    selected: !p.exists, // Productos existentes no se seleccionan por defecto
+    costPrice: p.costPriceRaw,
+    priceRetail: null,
+    priceWholesale: null,
+  }
+}
+
 // Search products
 async function searchProducts() {
-  if (!selectedSource.value || !selectedType.value) return
+  if (!selectedSource.value) return
+  if (!searchQuery.value.trim() && !selectedType.value) return
 
   loading.value = true
+  currentPage.value = 1
+
   try {
     const results = await api.import.search({
       source: selectedSource.value.id,
-      productType: selectedType.value,
+      search: searchQuery.value.trim() || undefined,
+      category: selectedType.value || undefined,
+      page: 1,
+      pageSize: PAGE_SIZE,
     })
 
-    // Transform to ProductToImport
-    products.value = results.map((p: ImportProductPreview) => ({
-      ...p,
-      selected: true,
-      costPrice: p.costPriceRaw,
-      priceRetail: null,
-      priceWholesale: null,
-      exists: false, // TODO: Check if exists by code
-    }))
+    products.value = results.map(mapToProductToImport)
+    hasMorePages.value = results.length === PAGE_SIZE
 
     nextStep()
   } catch (err) {
@@ -179,12 +199,45 @@ async function searchProducts() {
   }
 }
 
+// Load more products (pagination)
+async function loadMoreProducts() {
+  if (!selectedSource.value || loadingMore.value) return
+
+  loadingMore.value = true
+  currentPage.value++
+
+  try {
+    const results = await api.import.search({
+      source: selectedSource.value.id,
+      search: searchQuery.value.trim() || undefined,
+      category: selectedType.value || undefined,
+      page: currentPage.value,
+      pageSize: PAGE_SIZE,
+    })
+
+    products.value.push(...results.map(mapToProductToImport))
+    hasMorePages.value = results.length === PAGE_SIZE
+  } catch (err) {
+    currentPage.value--
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: err instanceof Error ? err.message : labels.messages.errorGeneric,
+      life: 3000,
+    })
+  } finally {
+    loadingMore.value = false
+  }
+}
+
 // Apply margin to selected products
 function applyMargin(multiplier: number) {
   products.value
     .filter((p) => p.selected && !p.exists)
     .forEach((p) => {
-      p.priceRetail = Math.round(p.costPrice * multiplier * 100) / 100
+      const price = Math.round(p.costPrice * multiplier * 100) / 100
+      p.priceRetail = price
+      p.priceWholesale = price
     })
 }
 
@@ -366,13 +419,23 @@ onMounted(loadData)
           <div v-else-if="currentStep === 1" class="step-panel">
             <div class="search-form">
               <div class="form-field">
-                <label>{{ labels.import.productType }} *</label>
+                <label>{{ labels.import.searchText }}</label>
+                <InputText
+                  v-model="searchQuery"
+                  :placeholder="labels.import.searchPlaceholder"
+                  class="w-full"
+                />
+              </div>
+
+              <div class="form-field">
+                <label>{{ labels.import.filterByCategory }}</label>
                 <Select
                   v-model="selectedType"
                   :options="productTypeOptions"
                   optionLabel="label"
                   optionValue="value"
-                  :placeholder="labels.import.selectType"
+                  :placeholder="labels.import.allCategories"
+                  showClear
                   class="w-full"
                 />
               </div>
@@ -519,6 +582,17 @@ onMounted(loadData)
                 </template>
               </Column>
             </DataTable>
+
+            <div v-if="hasMorePages" class="load-more-container">
+              <Button
+                :label="labels.import.loadMore"
+                icon="pi pi-plus"
+                severity="secondary"
+                outlined
+                :loading="loadingMore"
+                @click="loadMoreProducts"
+              />
+            </div>
           </div>
 
           <!-- Step 4: Confirm -->
@@ -813,6 +887,12 @@ onMounted(loadData)
 .price-input :deep(.p-inputnumber-input) {
   width: 100%;
   max-width: 100px;
+}
+
+.load-more-container {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--spacing-lg);
 }
 
 /* Step 4: Confirm */

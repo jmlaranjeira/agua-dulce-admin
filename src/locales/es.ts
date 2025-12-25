@@ -193,23 +193,28 @@ export const labels = {
     comingSoon: 'Próximamente',
 
     // Step 2
+    searchText: 'Buscar productos',
+    searchPlaceholder: 'Nombre, código, tags...',
+    filterByCategory: 'Filtrar por categoría',
+    allCategories: 'Todas las categorías',
     productType: 'Tipo de producto',
     selectType: 'Seleccionar tipo',
     targetSupplier: 'Proveedor destino',
     defaultCategory: 'Categoría por defecto',
-    searchProducts: 'Buscar productos',
+    searchProducts: 'Buscar',
 
     // Step 3
     selectProducts: 'Selecciona y configura los productos',
     image: 'Imagen',
     cost: 'Coste',
-    retail: 'Retail',
-    b2b: 'B2B',
+    retail: 'PVP',
+    b2b: 'Mayorista',
     statusNew: 'Nuevo',
     statusExists: 'Ya existe',
     applyMargin: 'Aplicar margen',
     customMargin: 'Margen personalizado',
     selected: 'seleccionados',
+    loadMore: 'Cargar más',
 
     // Step 4
     summary: 'Resumen de importación',

@@ -223,6 +223,7 @@ export type ImportProductPreview = {
   notes: string
   imageUrl: string
   suggestedCategoryId: string | null
+  exists: boolean
 }
 
 export type ProductToImport = ImportProductPreview & {
@@ -230,12 +231,14 @@ export type ProductToImport = ImportProductPreview & {
   costPrice: number
   priceRetail: number | null
   priceWholesale: number | null
-  exists?: boolean
 }
 
 export type ImportSearchRequest = {
   source: string
-  productType: string
+  search?: string
+  category?: string
+  page?: number
+  pageSize?: number
 }
 
 export type ImportProductItem = {
