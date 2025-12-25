@@ -2,6 +2,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
+import { useConfirm } from 'primevue/useconfirm'
 import Card from 'primevue/card'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
@@ -18,6 +19,7 @@ import type { Product, Supplier, Category } from '@/types'
 
 const router = useRouter()
 const toast = useToast()
+const confirm = useConfirm()
 
 const products = ref<Product[]>([])
 const suppliers = ref<Supplier[]>([])
@@ -111,6 +113,38 @@ async function deactivateProduct(product: Product) {
       severity: 'success',
       summary: 'OK',
       detail: labels.products.deactivatedSuccess,
+      life: 3000,
+    })
+  } catch (err) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: err instanceof Error ? err.message : labels.messages.errorGeneric,
+      life: 3000,
+    })
+  }
+}
+
+function confirmDeleteProduct(product: Product) {
+  confirm.require({
+    message: labels.products.confirmDelete,
+    header: labels.actions.delete,
+    icon: 'pi pi-exclamation-triangle',
+    acceptLabel: labels.actions.delete,
+    rejectLabel: labels.actions.cancel,
+    acceptClass: 'p-button-danger',
+    accept: () => deleteProduct(product),
+  })
+}
+
+async function deleteProduct(product: Product) {
+  try {
+    await api.products.delete(product.id)
+    products.value = products.value.filter((p) => p.id !== product.id)
+    toast.add({
+      severity: 'success',
+      summary: 'OK',
+      detail: labels.products.deletedSuccess,
       life: 3000,
     })
   } catch (err) {
@@ -245,7 +279,7 @@ onMounted(loadData)
             </template>
           </Column>
 
-          <Column :header="labels.fields.actions" style="width: 120px">
+          <Column :header="labels.fields.actions" style="width: 150px">
             <template #body="{ data }">
               <div class="actions">
                 <Button
@@ -260,9 +294,17 @@ onMounted(loadData)
                   icon="pi pi-times"
                   text
                   rounded
+                  severity="warn"
+                  v-tooltip.top="labels.actions.deactivate"
+                  @click="deactivateProduct(data)"
+                />
+                <Button
+                  icon="pi pi-trash"
+                  text
+                  rounded
                   severity="danger"
                   v-tooltip.top="labels.actions.delete"
-                  @click="deactivateProduct(data)"
+                  @click="confirmDeleteProduct(data)"
                 />
               </div>
             </template>

@@ -352,7 +352,31 @@ onMounted(loadData)
 
 .product-image-col {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
+  justify-content: center;
+}
+
+.product-image-col :deep(.image-upload) {
+  width: 100%;
+  max-width: 320px;
+}
+
+.product-image-col :deep(.drop-zone) {
+  aspect-ratio: 1;
+  padding: 0;
+}
+
+.product-image-col :deep(.preview-container) {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.product-image-col :deep(.preview-image) {
+  max-width: 100%;
+  max-height: 320px;
+  width: auto;
+  height: auto;
 }
 
 .product-info-col {
