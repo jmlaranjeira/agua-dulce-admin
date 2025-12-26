@@ -22,6 +22,7 @@ const toast = useToast()
 const confirm = useConfirm()
 
 const products = ref<Product[]>([])
+const selectedProducts = ref<Product[]>([])
 const suppliers = ref<Supplier[]>([])
 const categories = ref<Category[]>([])
 const loading = ref(true)
@@ -157,6 +158,40 @@ async function deleteProduct(product: Product) {
   }
 }
 
+function confirmBulkDelete() {
+  confirm.require({
+    message: `¿Eliminar ${selectedProducts.value.length} productos?`,
+    header: labels.actions.delete,
+    icon: 'pi pi-exclamation-triangle',
+    acceptLabel: labels.actions.delete,
+    rejectLabel: labels.actions.cancel,
+    acceptClass: 'p-button-danger',
+    accept: () => bulkDelete(),
+  })
+}
+
+async function bulkDelete() {
+  try {
+    await Promise.all(selectedProducts.value.map((p) => api.products.delete(p.id)))
+    const deletedIds = new Set(selectedProducts.value.map((p) => p.id))
+    products.value = products.value.filter((p) => !deletedIds.has(p.id))
+    selectedProducts.value = []
+    toast.add({
+      severity: 'success',
+      summary: 'OK',
+      detail: labels.products.deletedSuccess,
+      life: 3000,
+    })
+  } catch (err) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: err instanceof Error ? err.message : labels.messages.errorGeneric,
+      life: 3000,
+    })
+  }
+}
+
 function formatPrice(price: number): string {
   return new Intl.NumberFormat('es-ES', {
     style: 'currency',
@@ -221,13 +256,26 @@ onMounted(loadData)
       />
     </div>
 
+    <div v-if="selectedProducts.length > 0" class="bulk-actions">
+      <span class="bulk-count">{{ selectedProducts.length }} seleccionados</span>
+      <Button
+        :label="labels.actions.delete"
+        icon="pi pi-trash"
+        severity="danger"
+        size="small"
+        @click="confirmBulkDelete"
+      />
+    </div>
+
     <Card class="table-card">
       <template #content>
         <DataTable
           v-model:filters="filters"
+          v-model:selection="selectedProducts"
           :value="products"
           :loading="loading"
           :globalFilterFields="['code', 'name']"
+          dataKey="id"
           paginator
           :rows="10"
           :rowsPerPageOptions="[10, 25, 50]"
@@ -241,6 +289,8 @@ onMounted(loadData)
               {{ labels.products.noProducts }}
             </div>
           </template>
+
+          <Column selectionMode="multiple" headerStyle="width: 3rem" />
 
           <Column header="" style="width: 70px">
             <template #body="{ data }">
@@ -258,13 +308,13 @@ onMounted(loadData)
             </template>
           </Column>
 
-          <Column field="supplier" :header="labels.fields.supplier">
+          <Column field="supplier" :header="labels.fields.supplier" style="width: 130px">
             <template #body="{ data }">
               {{ getSupplierName(data) }}
             </template>
           </Column>
 
-          <Column field="category" :header="labels.fields.category">
+          <Column field="category" :header="labels.fields.category" style="width: 130px">
             <template #body="{ data }">
               {{ getCategoryName(data) }}
             </template>
@@ -396,6 +446,20 @@ onMounted(loadData)
 .actions {
   display: flex;
   gap: var(--spacing-xs);
+}
+
+.bulk-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--p-red-50);
+  border-radius: var(--border-radius);
+}
+
+.bulk-count {
+  font-weight: 500;
+  color: var(--p-red-700);
 }
 
 @media (max-width: 768px) {
