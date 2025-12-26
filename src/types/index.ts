@@ -265,6 +265,7 @@ export type ExecuteImportRequest = {
   invoiceDate?: string
   supplierId?: string
   shippingCost?: number
+  savePdf?: boolean
 }
 
 export type ImportResult = {

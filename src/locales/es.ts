@@ -285,6 +285,7 @@ export const labels = {
     grandTotal: 'Total factura',
     allSuppliers: 'Todos los proveedores',
     viewPdf: 'Ver PDF',
+    downloadPdf: 'Descargar factura',
     confirmDelete: '¿Eliminar esta factura? Se revertirá el stock.',
     deletedSuccess: 'Factura eliminada correctamente',
     orderItems: 'Productos de la factura',

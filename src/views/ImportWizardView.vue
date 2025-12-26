@@ -73,6 +73,7 @@ const invoiceInfo = ref<{
   subtotal: number
   shippingCost: number
 }>({ number: null, date: null, exists: false, existingId: null, subtotal: 0, shippingCost: 0 })
+const invoicePdfFile = ref<File | null>(null)
 
 // Steps configuration
 const stepItems = computed(() => [
@@ -285,6 +286,9 @@ async function onInvoiceSelect(event: { files: File[] }) {
   try {
     const response = await api.import.parseInvoice(file)
 
+    // Store the PDF file for later upload
+    invoicePdfFile.value = file
+
     // Store invoice info
     invoiceInfo.value = {
       number: response.invoiceNumber,
@@ -390,27 +394,34 @@ async function executeImport() {
 
   importing.value = true
   try {
-    const result = await api.import.execute({
-      source: selectedSource.value!.id,
-      products: selectedProducts.value.map((p) => ({
-        externalId: p.externalId,
-        code: p.code,
-        name: p.name,
-        priceRetail: p.priceRetail!,
-        priceWholesale: p.priceWholesale ?? undefined,
-        costPrice: p.costPrice,
-        imageUrl: p.imageUrl,
-        notes: p.notes,
+    const isInvoiceImport = selectedSource.value!.id === 'rainbow-invoice'
+    const result = await api.import.execute(
+      {
+        source: selectedSource.value!.id,
+        products: selectedProducts.value.map((p) => ({
+          externalId: p.externalId,
+          code: p.code,
+          name: p.name,
+          priceRetail: p.priceRetail!,
+          priceWholesale: p.priceWholesale ?? undefined,
+          costPrice: p.costPrice,
+          imageUrl: p.imageUrl,
+          notes: p.notes,
+          supplierId: selectedSupplier.value ?? undefined,
+          categoryId: selectedCategory.value ?? p.suggestedCategoryId ?? undefined,
+          quantity: p.stockQty || undefined,
+        })),
+        // Invoice metadata (for rainbow-invoice source)
+        invoiceNumber: invoiceInfo.value.number ?? undefined,
+        invoiceDate: invoiceInfo.value.date ?? undefined,
         supplierId: selectedSupplier.value ?? undefined,
-        categoryId: selectedCategory.value ?? p.suggestedCategoryId ?? undefined,
-        quantity: p.stockQty || undefined,
-      })),
-      // Invoice metadata (for rainbow-invoice source)
-      invoiceNumber: invoiceInfo.value.number ?? undefined,
-      invoiceDate: invoiceInfo.value.date ?? undefined,
-      supplierId: selectedSupplier.value ?? undefined,
-      shippingCost: invoiceInfo.value.shippingCost || undefined,
-    })
+        shippingCost: invoiceInfo.value.shippingCost || undefined,
+        // Save PDF to bucket
+        savePdf: isInvoiceImport && !!invoicePdfFile.value,
+      },
+      // Pass the PDF file if available
+      isInvoiceImport ? invoicePdfFile.value ?? undefined : undefined,
+    )
 
     const message = labels.import.importedCount
       .replace('{imported}', String(result.imported))

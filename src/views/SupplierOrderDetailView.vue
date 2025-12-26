@@ -55,9 +55,18 @@ function goBack() {
   router.push('/supplier-orders')
 }
 
-function openPdf() {
-  if (order.value?.pdfUrl) {
-    window.open(order.value.pdfUrl, '_blank')
+async function downloadPdf() {
+  if (!order.value?.id) return
+  try {
+    const { url } = await api.import.getPdfUrl(order.value.id)
+    window.open(url, '_blank')
+  } catch (err) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: 'No se pudo obtener el PDF',
+      life: 3000,
+    })
   }
 }
 
@@ -83,10 +92,10 @@ onMounted(loadOrder)
             <Button
               v-if="order.pdfUrl"
               icon="pi pi-file-pdf"
-              :label="labels.supplierOrders.viewPdf"
               severity="danger"
               outlined
-              @click="openPdf"
+              v-tooltip.bottom="labels.supplierOrders.downloadPdf"
+              @click="downloadPdf"
             />
           </div>
         </div>

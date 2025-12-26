@@ -166,11 +166,51 @@ export const api = {
         method: 'POST',
         body: JSON.stringify(data),
       }),
-    execute: (data: ExecuteImportRequest) =>
-      request<ImportResult>('/import/execute', {
+    execute: async (data: ExecuteImportRequest, file?: File): Promise<ImportResult> => {
+      const authStore = useAuthStore()
+
+      // If file is provided, send as multipart/form-data
+      if (file) {
+        const formData = new FormData()
+        formData.append('file', file)
+        formData.append('data', JSON.stringify(data))
+
+        const headers: HeadersInit = {}
+        if (authStore.token) {
+          headers['Authorization'] = `Bearer ${authStore.token}`
+        }
+
+        const response = await fetch(`${API_URL}/import/execute`, {
+          method: 'POST',
+          headers,
+          body: formData,
+        })
+
+        if (response.status === 401) {
+          authStore.logout()
+          router.push('/login')
+          throw new Error('Sesión expirada')
+        }
+
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({}))
+          const message = error.message
+            ? Array.isArray(error.message)
+              ? error.message[0]
+              : error.message
+            : `Error ${response.status}`
+          throw new Error(message)
+        }
+
+        return response.json()
+      }
+
+      // No file, send as JSON
+      return request<ImportResult>('/import/execute', {
         method: 'POST',
         body: JSON.stringify(data),
-      }),
+      })
+    },
     parseInvoice: async (file: File): Promise<InvoicePreviewResponse> => {
       const authStore = useAuthStore()
       const formData = new FormData()
@@ -206,6 +246,8 @@ export const api = {
 
       return response.json()
     },
+    getPdfUrl: (supplierOrderId: string) =>
+      request<{ url: string }>(`/import/pdf/${supplierOrderId}`),
   },
 
   stock: {
