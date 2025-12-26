@@ -258,6 +258,10 @@ export const labels = {
     notFoundInApi: 'PDF',
     invoiceSummary: '{total} productos, {found} encontrados en API, {existing} ya existen',
     parsingInvoice: 'Procesando factura...',
+    invoiceExists: 'Factura ya registrada',
+    invoiceExistsDetail: 'La factura {number} ya está en el sistema. Puedes continuar pero no se creará un duplicado.',
+    viewExistingInvoice: 'Ver factura existente',
+    totalStockToAdd: 'Stock total a añadir',
   },
   stock: {
     stock: 'Stock',

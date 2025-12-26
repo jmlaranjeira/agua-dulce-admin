@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, RouterLink } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import Card from 'primevue/card'
 import Steps from 'primevue/steps'
@@ -15,6 +15,7 @@ import Tag from 'primevue/tag'
 import ProgressSpinner from 'primevue/progressspinner'
 import Dialog from 'primevue/dialog'
 import FileUpload from 'primevue/fileupload'
+import Message from 'primevue/message'
 import ImageThumbnail from '@/components/ImageThumbnail.vue'
 import { api } from '@/services/api'
 import { labels } from '@/locales/es'
@@ -64,6 +65,12 @@ const customMargin = ref(2)
 
 // Invoice parsing state
 const parsingInvoice = ref(false)
+const invoiceInfo = ref<{
+  number: string | null
+  date: string | null
+  exists: boolean
+  existingId: string | null
+}>({ number: null, date: null, exists: false, existingId: null })
 
 // Steps configuration
 const stepItems = computed(() => [
@@ -131,6 +138,9 @@ const totalCost = computed(() =>
 )
 const totalRetail = computed(() =>
   selectedProducts.value.reduce((sum, p) => sum + (p.priceRetail || 0), 0)
+)
+const totalStock = computed(() =>
+  selectedProducts.value.reduce((sum, p) => sum + (p.stockQty || 0), 0)
 )
 
 // Get supplier and category names for summary
@@ -273,6 +283,14 @@ async function onInvoiceSelect(event: { files: File[] }) {
   try {
     const response = await api.import.parseInvoice(file)
 
+    // Store invoice info
+    invoiceInfo.value = {
+      number: response.invoiceNumber,
+      date: response.invoiceDate,
+      exists: response.invoiceExists,
+      existingId: response.existingInvoiceId,
+    }
+
     // Transform to ProductToImport format
     products.value = response.items.map(mapInvoiceItemToProduct)
     hasMorePages.value = false
@@ -280,6 +298,16 @@ async function onInvoiceSelect(event: { files: File[] }) {
     // Set suggested supplier if not already selected
     if (!selectedSupplier.value && response.suggestedSupplierId) {
       selectedSupplier.value = response.suggestedSupplierId
+    }
+
+    // Show warning if invoice exists
+    if (response.invoiceExists) {
+      toast.add({
+        severity: 'warn',
+        summary: labels.import.invoiceExists,
+        detail: labels.import.invoiceExistsDetail.replace('{number}', response.invoiceNumber || ''),
+        life: 8000,
+      })
     }
 
     // Show summary
@@ -602,6 +630,16 @@ onMounted(loadData)
 
           <!-- Step 3: Configure Products -->
           <div v-else-if="currentStep === 2" class="step-panel">
+            <!-- Invoice exists warning -->
+            <Message v-if="invoiceInfo.exists" severity="warn" :closable="false" class="invoice-warning">
+              <div class="warning-content">
+                <strong>{{ labels.import.invoiceExists }}:</strong> {{ invoiceInfo.number }}
+                <RouterLink :to="`/supplier-orders/${invoiceInfo.existingId}`" class="view-link">
+                  {{ labels.import.viewExistingInvoice }}
+                </RouterLink>
+              </div>
+            </Message>
+
             <div class="configure-header">
               <span class="selected-info">
                 {{ selectedCount }} {{ labels.import.selected }}
@@ -733,6 +771,16 @@ onMounted(loadData)
             </div>
 
             <template v-else>
+              <!-- Invoice exists warning -->
+              <Message v-if="invoiceInfo.exists" severity="warn" :closable="false" class="invoice-warning">
+                <div class="warning-content">
+                  <strong>{{ labels.import.invoiceExists }}:</strong> {{ invoiceInfo.number }}
+                  <RouterLink :to="`/supplier-orders/${invoiceInfo.existingId}`" class="view-link">
+                    {{ labels.import.viewExistingInvoice }}
+                  </RouterLink>
+                </div>
+              </Message>
+
               <Card class="summary-card">
                 <template #content>
                   <h3>{{ labels.import.summary }}</h3>
@@ -761,6 +809,10 @@ onMounted(loadData)
                       <span class="summary-label">{{ labels.import.retail }} total</span>
                       <span class="summary-value highlight">{{ formatCurrency(totalRetail) }}</span>
                     </div>
+                    <div v-if="isInvoiceSource" class="summary-item">
+                      <span class="summary-label">{{ labels.import.totalStockToAdd }}</span>
+                      <span class="summary-value">{{ totalStock }} uds.</span>
+                    </div>
                   </div>
                 </template>
               </Card>
@@ -773,6 +825,11 @@ onMounted(loadData)
                 </Column>
                 <Column field="code" :header="labels.fields.code" style="width: 200px" />
                 <Column field="name" :header="labels.fields.name" style="max-width: 150px" />
+                <Column v-if="isInvoiceSource" :header="labels.fields.stock" style="width: 80px">
+                  <template #body="{ data }">
+                    <Tag :value="data.stockQty" severity="info" />
+                  </template>
+                </Column>
                 <Column :header="labels.import.cost" style="width: 100px">
                   <template #body="{ data }">{{ formatCurrency(data.costPrice) }}</template>
                 </Column>
@@ -1099,6 +1156,24 @@ onMounted(loadData)
 
 .preview-table {
   margin-top: var(--spacing-lg);
+}
+
+/* Invoice warning */
+.invoice-warning {
+  margin-bottom: var(--spacing-lg);
+}
+
+.warning-content {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  flex-wrap: wrap;
+}
+
+.view-link {
+  color: var(--p-primary-color);
+  text-decoration: underline;
+  font-weight: 500;
 }
 
 /* Navigation */

@@ -296,6 +296,10 @@ export type InvoicePreviewItem = {
 }
 
 export type InvoicePreviewResponse = {
+  invoiceNumber: string | null
+  invoiceDate: string | null
+  invoiceExists: boolean
+  existingInvoiceId: string | null
   items: InvoicePreviewItem[]
   suggestedSupplierId: string
   summary: {
