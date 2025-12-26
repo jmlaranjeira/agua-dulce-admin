@@ -105,8 +105,16 @@ onMounted(loadOrder)
             <span class="info-value">{{ order.supplier.name }}</span>
           </div>
           <div class="info-row">
-            <span class="info-label">{{ labels.supplierOrders.totalAmount }}:</span>
-            <span class="info-value total">{{ formatCurrency(order.totalAmount, order.currency) }}</span>
+            <span class="info-label">{{ labels.supplierOrders.subtotalProducts }}:</span>
+            <span class="info-value">{{ formatCurrency(order.totalAmount, order.currency) }}</span>
+          </div>
+          <div v-if="order.shippingCost > 0" class="info-row">
+            <span class="info-label">{{ labels.supplierOrders.shipping }}:</span>
+            <span class="info-value">{{ formatCurrency(order.shippingCost, order.currency) }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">{{ labels.supplierOrders.grandTotal }}:</span>
+            <span class="info-value total">{{ formatCurrency(order.totalAmount + order.shippingCost, order.currency) }}</span>
           </div>
         </div>
       </template>
@@ -153,9 +161,19 @@ onMounted(loadOrder)
           </Column>
         </DataTable>
 
-        <div class="total-row">
-          <span class="total-label">{{ labels.fields.total }}:</span>
-          <span class="total-value">{{ formatCurrency(order.totalAmount, order.currency) }}</span>
+        <div class="totals-section">
+          <div class="total-row">
+            <span class="total-label">{{ labels.supplierOrders.subtotalProducts }}:</span>
+            <span class="total-value">{{ formatCurrency(order.totalAmount, order.currency) }}</span>
+          </div>
+          <div v-if="order.shippingCost > 0" class="total-row">
+            <span class="total-label">{{ labels.supplierOrders.shipping }}:</span>
+            <span class="total-value">{{ formatCurrency(order.shippingCost, order.currency) }}</span>
+          </div>
+          <div class="total-row grand-total">
+            <span class="total-label">{{ labels.supplierOrders.grandTotal }}:</span>
+            <span class="total-value">{{ formatCurrency(order.totalAmount + order.shippingCost, order.currency) }}</span>
+          </div>
         </div>
       </template>
     </Card>
@@ -278,22 +296,41 @@ onMounted(loadOrder)
   color: var(--color-text-muted);
 }
 
-.total-row {
+.totals-section {
   display: flex;
-  justify-content: flex-end;
-  gap: var(--spacing-md);
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--spacing-xs);
   padding: var(--spacing-md);
   background-color: #f8fafc;
   border-radius: var(--border-radius);
   margin-top: var(--spacing-md);
 }
 
+.total-row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--spacing-xl);
+  min-width: 250px;
+}
+
 .total-label {
   font-weight: 500;
-  color: var(--color-text);
+  color: var(--color-text-muted);
 }
 
 .total-value {
+  font-weight: 500;
+}
+
+.total-row.grand-total {
+  padding-top: var(--spacing-sm);
+  margin-top: var(--spacing-xs);
+  border-top: 1px solid var(--color-border);
+}
+
+.total-row.grand-total .total-label,
+.total-row.grand-total .total-value {
   font-weight: 700;
   font-size: 1.125rem;
   color: var(--p-primary-color);

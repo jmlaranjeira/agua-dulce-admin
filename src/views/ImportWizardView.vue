@@ -70,7 +70,9 @@ const invoiceInfo = ref<{
   date: string | null
   exists: boolean
   existingId: string | null
-}>({ number: null, date: null, exists: false, existingId: null })
+  subtotal: number
+  shippingCost: number
+}>({ number: null, date: null, exists: false, existingId: null, subtotal: 0, shippingCost: 0 })
 
 // Steps configuration
 const stepItems = computed(() => [
@@ -289,6 +291,8 @@ async function onInvoiceSelect(event: { files: File[] }) {
       date: response.invoiceDate,
       exists: response.invoiceExists,
       existingId: response.existingInvoiceId,
+      subtotal: response.subtotal,
+      shippingCost: response.shippingCost,
     }
 
     // Transform to ProductToImport format
@@ -405,6 +409,7 @@ async function executeImport() {
       invoiceNumber: invoiceInfo.value.number ?? undefined,
       invoiceDate: invoiceInfo.value.date ?? undefined,
       supplierId: selectedSupplier.value ?? undefined,
+      shippingCost: invoiceInfo.value.shippingCost || undefined,
     })
 
     const message = labels.import.importedCount
@@ -819,6 +824,22 @@ onMounted(loadData)
                       <span class="summary-value">{{ totalStock }} uds.</span>
                     </div>
                   </div>
+
+                  <!-- Invoice totals -->
+                  <div v-if="isInvoiceSource && invoiceInfo.subtotal > 0" class="invoice-totals">
+                    <div class="totals-row">
+                      <span class="totals-label">{{ labels.supplierOrders.subtotalProducts }}</span>
+                      <span class="totals-value">{{ formatCurrency(invoiceInfo.subtotal) }}</span>
+                    </div>
+                    <div v-if="invoiceInfo.shippingCost > 0" class="totals-row">
+                      <span class="totals-label">{{ labels.supplierOrders.shipping }}</span>
+                      <span class="totals-value">{{ formatCurrency(invoiceInfo.shippingCost) }}</span>
+                    </div>
+                    <div class="totals-row grand-total">
+                      <span class="totals-label">{{ labels.supplierOrders.grandTotal }}</span>
+                      <span class="totals-value">{{ formatCurrency(invoiceInfo.subtotal + invoiceInfo.shippingCost) }}</span>
+                    </div>
+                  </div>
                 </template>
               </Card>
 
@@ -1157,6 +1178,43 @@ onMounted(loadData)
 
 .summary-value.highlight {
   color: var(--color-primary);
+}
+
+.invoice-totals {
+  margin-top: var(--spacing-lg);
+  padding-top: var(--spacing-lg);
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--spacing-sm);
+}
+
+.totals-row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--spacing-xl);
+  min-width: 250px;
+}
+
+.totals-label {
+  color: var(--color-text-muted);
+}
+
+.totals-value {
+  font-weight: 500;
+}
+
+.totals-row.grand-total {
+  padding-top: var(--spacing-sm);
+  border-top: 1px solid var(--color-border);
+}
+
+.totals-row.grand-total .totals-label,
+.totals-row.grand-total .totals-value {
+  font-weight: 700;
+  font-size: 1.1em;
+  color: var(--p-primary-color);
 }
 
 .preview-table {

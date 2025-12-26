@@ -264,6 +264,7 @@ export type ExecuteImportRequest = {
   invoiceNumber?: string
   invoiceDate?: string
   supplierId?: string
+  shippingCost?: number
 }
 
 export type ImportResult = {
@@ -307,6 +308,8 @@ export type InvoicePreviewResponse = {
   existingInvoiceId: string | null
   items: InvoicePreviewItem[]
   suggestedSupplierId: string
+  subtotal: number
+  shippingCost: number
   summary: {
     total: number
     found: number
@@ -347,6 +350,7 @@ export type SupplierOrder = {
   supplier: { id: string; name: string }
   invoiceDate: string
   totalAmount: number
+  shippingCost: number
   currency: string
   pdfUrl?: string | null
   notes?: string | null
