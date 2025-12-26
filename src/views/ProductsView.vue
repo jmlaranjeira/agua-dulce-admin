@@ -242,9 +242,9 @@ onMounted(loadData)
             </div>
           </template>
 
-          <Column header="" style="width: 60px">
+          <Column header="" style="width: 70px">
             <template #body="{ data }">
-              <ImageThumbnail :src="data.imageUrl" :size="40" :preview-size="200" />
+              <ImageThumbnail :src="data.imageUrl" :size="50" :preview-size="200" />
             </template>
           </Column>
 

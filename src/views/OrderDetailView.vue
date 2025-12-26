@@ -358,9 +358,9 @@ onMounted(loadOrder)
       </template>
       <template #content>
         <DataTable :value="order.items" class="items-table">
-          <Column header="" style="width: 50px">
+          <Column header="" style="width: 70px">
             <template #body="{ data }">
-              <ImageThumbnail :src="data.product.imageUrl" :size="36" :preview-size="180" />
+              <ImageThumbnail :src="data.product.imageUrl" :size="50" :preview-size="180" />
             </template>
           </Column>
 
