@@ -254,11 +254,16 @@ export type ImportProductItem = {
   notes?: string
   supplierId?: string
   categoryId?: string
+  quantity?: number
 }
 
 export type ExecuteImportRequest = {
   source: string
   products: ImportProductItem[]
+  // Invoice metadata (for rainbow-invoice source)
+  invoiceNumber?: string
+  invoiceDate?: string
+  supplierId?: string
 }
 
 export type ImportResult = {

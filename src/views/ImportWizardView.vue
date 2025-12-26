@@ -399,7 +399,12 @@ async function executeImport() {
         notes: p.notes,
         supplierId: selectedSupplier.value ?? undefined,
         categoryId: selectedCategory.value ?? p.suggestedCategoryId ?? undefined,
+        quantity: p.stockQty || undefined,
       })),
+      // Invoice metadata (for rainbow-invoice source)
+      invoiceNumber: invoiceInfo.value.number ?? undefined,
+      invoiceDate: invoiceInfo.value.date ?? undefined,
+      supplierId: selectedSupplier.value ?? undefined,
     })
 
     const message = labels.import.importedCount
