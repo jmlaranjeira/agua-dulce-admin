@@ -193,8 +193,6 @@ export const labels = {
     stock: 'Stock',
     unitCost: 'Coste unitario',
     totalCost: 'Coste total',
-    previousStock: 'Stock anterior',
-    newStock: 'Stock nuevo',
     reference: 'Referencia',
   },
   import: {

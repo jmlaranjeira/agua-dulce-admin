@@ -144,9 +144,18 @@ onMounted(async () => {
             </div>
           </template>
 
-          <Column :header="labels.fields.date" style="width: 160px">
+          <Column :header="labels.fields.date" style="width: 180px">
             <template #body="{ data }">
               {{ formatDate(data.createdAt) }}
+            </template>
+          </Column>
+
+          <Column header="Producto" style="min-width: 180px">
+            <template #body="{ data }">
+              <div class="product-cell">
+                <span class="product-code">{{ data.product?.code || '-' }}</span>
+                <span class="product-name">{{ data.product?.name || '' }}</span>
+              </div>
             </template>
           </Column>
 
@@ -161,18 +170,6 @@ onMounted(async () => {
               <span :class="{ 'text-positive': data.quantity > 0, 'text-negative': data.quantity < 0 }">
                 {{ data.quantity > 0 ? '+' : '' }}{{ data.quantity }}
               </span>
-            </template>
-          </Column>
-
-          <Column :header="labels.fields.previousStock" style="width: 100px">
-            <template #body="{ data }">
-              {{ data.previousStock }}
-            </template>
-          </Column>
-
-          <Column :header="labels.fields.newStock" style="width: 100px">
-            <template #body="{ data }">
-              {{ data.newStock }}
             </template>
           </Column>
 
@@ -250,6 +247,22 @@ onMounted(async () => {
 .empty-message {
   text-align: center;
   padding: var(--spacing-xl);
+  color: var(--color-text-muted);
+}
+
+.product-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.product-code {
+  font-weight: 600;
+  color: var(--p-primary-color);
+}
+
+.product-name {
+  font-size: 0.85rem;
   color: var(--color-text-muted);
 }
 

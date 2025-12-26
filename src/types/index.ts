@@ -323,8 +323,6 @@ export type StockMovement = {
   product?: { id: string; code: string; name: string }
   type: StockMovementType
   quantity: number
-  previousStock: number
-  newStock: number
   reference?: string | null
   notes?: string | null
   createdAt: string
