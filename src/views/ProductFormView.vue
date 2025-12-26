@@ -8,6 +8,7 @@ import InputNumber from 'primevue/inputnumber'
 import Select from 'primevue/select'
 import InputSwitch from 'primevue/inputswitch'
 import Button from 'primevue/button'
+import Tag from 'primevue/tag'
 import ImageUpload from '@/components/ImageUpload.vue'
 import { api } from '@/services/api'
 import { labels } from '@/locales/es'
@@ -30,6 +31,7 @@ const form = ref({
   supplierId: null as string | null,
   categoryId: null as string | null,
   isActive: true,
+  stock: 0,
 })
 
 const suppliers = ref<Supplier[]>([])
@@ -102,6 +104,7 @@ async function loadData() {
         supplierId: product.supplierId,
         categoryId: product.categoryId,
         isActive: product.isActive,
+        stock: product.stock,
       }
     }
   } catch (err) {
@@ -244,6 +247,19 @@ onMounted(loadData)
                   showClear
                   class="w-full"
                 />
+              </div>
+
+              <div v-if="isEditMode" class="form-field">
+                <label>{{ labels.fields.stock }}</label>
+                <div class="stock-display">
+                  <Tag
+                    :value="form.stock"
+                    :severity="form.stock < 5 ? 'danger' : form.stock < 10 ? 'warn' : 'success'"
+                  />
+                  <small v-if="form.stock < 5" class="stock-warning">
+                    <i class="pi pi-exclamation-triangle" /> {{ labels.stock.lowStockWarning }}
+                  </small>
+                </div>
               </div>
             </div>
           </div>
@@ -419,6 +435,19 @@ onMounted(loadData)
   background-color: #f0fdf4;
   border-radius: var(--border-radius);
   color: #166534;
+}
+
+.stock-display {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.stock-warning {
+  color: #dc2626;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .form-actions {

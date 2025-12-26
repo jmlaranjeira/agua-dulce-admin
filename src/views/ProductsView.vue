@@ -270,6 +270,15 @@ onMounted(loadData)
             </template>
           </Column>
 
+          <Column field="stock" :header="labels.fields.stock" sortable style="width: 90px">
+            <template #body="{ data }">
+              <Tag
+                :value="data.stock"
+                :severity="data.stock < 5 ? 'danger' : data.stock < 10 ? 'warn' : 'success'"
+              />
+            </template>
+          </Column>
+
           <Column field="isActive" :header="labels.fields.status" style="width: 90px">
             <template #body="{ data }">
               <Tag

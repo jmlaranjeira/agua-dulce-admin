@@ -22,6 +22,8 @@ import type {
   ExecuteImportRequest,
   ImportResult,
   InvoicePreviewResponse,
+  StockMovement,
+  SupplierOrder,
 } from '@/types'
 import { useAuthStore } from '@/stores/auth'
 import router from '@/router'
@@ -204,5 +206,34 @@ export const api = {
 
       return response.json()
     },
+  },
+
+  stock: {
+    getMovements: (limit?: number) => {
+      const params = limit ? `?limit=${limit}` : ''
+      return request<StockMovement[]>(`/stock/movements${params}`)
+    },
+    getMovementsByProduct: (productId: string) =>
+      request<StockMovement[]>(`/stock/movements/${productId}`),
+    getLowStock: (threshold?: number) => {
+      const params = threshold ? `?threshold=${threshold}` : ''
+      return request<Product[]>(`/stock/low-stock${params}`)
+    },
+    adjust: (productId: string, quantity: number, notes?: string) =>
+      request<StockMovement>('/stock/adjustment', {
+        method: 'POST',
+        body: JSON.stringify({ productId, quantity, notes }),
+      }),
+  },
+
+  supplierOrders: {
+    list: (filters?: { supplierId?: string }) => {
+      const params = new URLSearchParams()
+      if (filters?.supplierId) params.set('supplierId', filters.supplierId)
+      const query = params.toString()
+      return request<SupplierOrder[]>(`/supplier-orders${query ? `?${query}` : ''}`)
+    },
+    get: (id: string) => request<SupplierOrder>(`/supplier-orders/${id}`),
+    delete: (id: string) => request<void>(`/supplier-orders/${id}`, { method: 'DELETE' }),
   },
 }

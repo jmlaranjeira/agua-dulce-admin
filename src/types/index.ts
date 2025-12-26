@@ -29,6 +29,7 @@ export interface RegisterRequest {
 // Enums
 // ===========================================
 export type OrderStatus = 'PENDING' | 'PAID' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED'
+export type StockMovementType = 'PURCHASE' | 'SALE' | 'ADJUSTMENT' | 'RETURN'
 
 // ===========================================
 // Response types (lo que devuelve la API)
@@ -58,6 +59,7 @@ export type Product = {
   costPrice: number | null
   imageUrl: string | null
   isActive: boolean
+  stock: number
   supplierId: string | null
   supplier?: Supplier
   categoryId: string | null
@@ -301,4 +303,47 @@ export type InvoicePreviewResponse = {
     found: number
     existing: number
   }
+}
+
+// =============================================
+// Stock types
+// =============================================
+export type StockMovement = {
+  id: string
+  productId: string
+  product?: { id: string; code: string; name: string }
+  type: StockMovementType
+  quantity: number
+  previousStock: number
+  newStock: number
+  reference?: string | null
+  notes?: string | null
+  createdAt: string
+}
+
+// =============================================
+// Supplier Order types
+// =============================================
+export type SupplierOrderItem = {
+  id: string
+  productId: string
+  product: { id: string; code: string; name: string; imageUrl: string | null }
+  quantity: number
+  unitCost: number
+  totalCost: number
+}
+
+export type SupplierOrder = {
+  id: string
+  invoiceNumber: string
+  supplierId: string
+  supplier: { id: string; name: string }
+  invoiceDate: string
+  totalAmount: number
+  currency: string
+  pdfUrl?: string | null
+  notes?: string | null
+  itemCount: number
+  items?: SupplierOrderItem[]
+  createdAt: string
 }
