@@ -332,38 +332,50 @@ onMounted(loadData)
 
           <Column selectionMode="multiple" headerStyle="width: 3rem" />
 
-          <Column header="" style="width: 70px">
+          <Column header="" style="width: 60px">
             <template #body="{ data }">
-              <ImageThumbnail :src="data.imageUrl" :size="50" :preview-size="200" />
+              <ImageThumbnail :src="data.imageUrl" :size="40" :preview-size="200" />
             </template>
           </Column>
 
-          <Column field="code" :header="labels.fields.code" sortable style="width: 120px" class="hidden-tablet" />
-
-          <Column field="name" :header="labels.fields.name" sortable />
-
-          <Column field="priceRetail" :header="labels.fields.priceRetail" sortable style="width: 110px">
+          <Column field="code" :header="labels.fields.code" sortable style="width: 140px">
             <template #body="{ data }">
-              {{ formatPrice(data.priceRetail) }}
+              <span class="product-code">{{ data.code }}</span>
             </template>
           </Column>
 
-          <Column field="stock" :header="labels.fields.stock" sortable style="width: 90px">
+          <Column field="name" :header="labels.fields.name" sortable style="width: 190px">
             <template #body="{ data }">
-              <Tag
-                :value="data.stock"
-                :severity="getStockSeverity(data.stock)"
-              />
+              <span class="product-name">{{ data.name }}</span>
             </template>
           </Column>
 
-          <Column field="supplier" :header="labels.fields.supplier" style="width: 130px" class="hidden-tablet">
+          <Column field="category" :header="labels.fields.category" style="width: 130px" class="hidden-tablet">
             <template #body="{ data }">
-              {{ getSupplierName(data) }}
+              <Tag v-if="data.category" :value="data.category.name" severity="secondary" />
+              <span v-else class="text-muted">-</span>
             </template>
           </Column>
 
-          <Column field="isActive" :header="labels.fields.status" style="width: 90px">
+          <Column field="supplier" :header="labels.fields.supplier" style="width: 140px" class="hidden-tablet">
+            <template #body="{ data }">
+              <span class="supplier-name">{{ getSupplierName(data) }}</span>
+            </template>
+          </Column>
+
+          <Column field="priceRetail" header="Precio" sortable style="width: 95px" class="text-right">
+            <template #body="{ data }">
+              <span class="product-price">{{ formatPrice(data.priceRetail) }}</span>
+            </template>
+          </Column>
+
+          <Column field="stock" :header="labels.fields.stock" sortable style="width: 75px" class="text-center">
+            <template #body="{ data }">
+              <Tag :value="data.stock" :severity="getStockSeverity(data.stock)" />
+            </template>
+          </Column>
+
+          <Column field="isActive" header="Estado" style="width: 90px" class="text-center">
             <template #body="{ data }">
               <Tag
                 :value="data.isActive ? labels.products.active : labels.products.inactive"
@@ -372,13 +384,14 @@ onMounted(loadData)
             </template>
           </Column>
 
-          <Column :header="labels.fields.actions" style="width: 140px">
+          <Column :header="labels.fields.actions" style="width: 110px">
             <template #body="{ data }">
               <div class="actions">
                 <Button
                   icon="pi pi-pencil"
                   text
                   rounded
+                  size="small"
                   v-tooltip.top="labels.actions.edit"
                   @click="goToEdit(data.id)"
                 />
@@ -387,6 +400,7 @@ onMounted(loadData)
                   icon="pi pi-times"
                   text
                   rounded
+                  size="small"
                   severity="warn"
                   v-tooltip.top="labels.actions.deactivate"
                   @click="deactivateProduct(data)"
@@ -395,6 +409,7 @@ onMounted(loadData)
                   icon="pi pi-trash"
                   text
                   rounded
+                  size="small"
                   severity="danger"
                   v-tooltip.top="labels.actions.delete"
                   @click="confirmDeleteProduct(data)"
@@ -525,9 +540,44 @@ onMounted(loadData)
   color: var(--color-text-muted);
 }
 
+.product-code {
+  font-family: monospace;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+.product-name {
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.supplier-name {
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+}
+
+.product-price {
+  font-weight: 600;
+}
+
+.text-muted {
+  color: var(--color-text-muted);
+}
+
+.text-right :deep(th),
+.text-right :deep(td) {
+  text-align: right !important;
+}
+
+.text-center :deep(th),
+.text-center :deep(td) {
+  text-align: center !important;
+}
+
 .actions {
   display: flex;
-  gap: var(--spacing-xs);
+  gap: 2px;
 }
 
 .bulk-actions {
