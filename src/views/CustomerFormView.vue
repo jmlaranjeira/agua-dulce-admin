@@ -258,76 +258,86 @@ onMounted(() => {
 
 <template>
   <div class="customer-form-view">
-    <Card>
-      <template #content>
-        <form @submit.prevent="save" class="form">
-          <div class="form-field">
-            <label for="phone">{{ labels.fields.phone }} *</label>
-            <InputText
-              id="phone"
-              v-model="form.phone"
-              :class="{ 'p-invalid': errors.phone }"
-              :disabled="loading"
-            />
-            <small v-if="errors.phone" class="p-error">{{ errors.phone }}</small>
-          </div>
+    <!-- Layout principal: Formulario + Direcciones en dos columnas -->
+    <div class="main-layout" :class="{ 'two-columns': isEditMode }">
+      <!-- Card Formulario -->
+      <Card>
+        <template #content>
+          <form @submit.prevent="save" class="form">
+            <!-- Fila 1: Teléfono y Nombre -->
+            <div class="form-row">
+              <div class="form-field">
+                <label for="phone">{{ labels.fields.phone }} *</label>
+                <InputText
+                  id="phone"
+                  v-model="form.phone"
+                  :class="{ 'p-invalid': errors.phone }"
+                  :disabled="loading"
+                />
+                <small v-if="errors.phone" class="p-error">{{ errors.phone }}</small>
+              </div>
 
-          <div class="form-field">
-            <label for="name">{{ labels.fields.name }} *</label>
-            <InputText
-              id="name"
-              v-model="form.name"
-              :class="{ 'p-invalid': errors.name }"
-              :disabled="loading"
-            />
-            <small v-if="errors.name" class="p-error">{{ errors.name }}</small>
-          </div>
+              <div class="form-field">
+                <label for="name">{{ labels.fields.name }} *</label>
+                <InputText
+                  id="name"
+                  v-model="form.name"
+                  :class="{ 'p-invalid': errors.name }"
+                  :disabled="loading"
+                />
+                <small v-if="errors.name" class="p-error">{{ errors.name }}</small>
+              </div>
+            </div>
 
-          <div class="form-field">
-            <label for="type">{{ labels.customerType.label }}</label>
-            <Select
-              id="type"
-              v-model="form.type"
-              :options="customerTypeOptions"
-              optionLabel="label"
-              optionValue="value"
-              :disabled="loading"
-            />
-          </div>
+            <!-- Fila 2: Tipo de Cliente -->
+            <div class="form-row">
+              <div class="form-field">
+                <label for="type">{{ labels.customerType.label }}</label>
+                <Select
+                  id="type"
+                  v-model="form.type"
+                  :options="customerTypeOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  :disabled="loading"
+                />
+              </div>
+            </div>
 
-          <div class="form-field">
-            <label for="notes">{{ labels.fields.notes }}</label>
-            <Textarea
-              id="notes"
-              v-model="form.notes"
-              :disabled="loading"
-              rows="4"
-              autoResize
-            />
-          </div>
+            <!-- Fila 3: Notas -->
+            <div class="form-field">
+              <label for="notes">{{ labels.fields.notes }}</label>
+              <Textarea
+                id="notes"
+                v-model="form.notes"
+                :disabled="loading"
+                rows="4"
+                autoResize
+              />
+            </div>
 
-          <div class="form-actions">
-            <Button
-              type="button"
-              :label="labels.actions.cancel"
-              severity="secondary"
-              outlined
-              @click="cancel"
-              :disabled="saving"
-            />
-            <Button
-              type="submit"
-              :label="labels.actions.save"
-              :loading="saving"
-              :disabled="loading"
-            />
-          </div>
-        </form>
-      </template>
-    </Card>
+            <div class="form-actions">
+              <Button
+                type="button"
+                :label="labels.actions.cancel"
+                severity="secondary"
+                outlined
+                @click="cancel"
+                :disabled="saving"
+              />
+              <Button
+                type="submit"
+                :label="labels.actions.save"
+                :loading="saving"
+                :disabled="loading"
+              />
+            </div>
+          </form>
+        </template>
+      </Card>
 
-    <!-- Sección Direcciones -->
-    <Card v-if="isEditMode" class="addresses-card">
+      <!-- Card Direcciones (solo en modo edición) -->
+      <Card v-if="isEditMode" class="addresses-card">
       <template #title>
         <div class="section-header">
           <span>{{ labels.address.title }}</span>
@@ -393,6 +403,7 @@ onMounted(() => {
         </div>
       </template>
     </Card>
+    </div>
 
     <!-- Dialog para añadir/editar dirección -->
     <AddressDialog
@@ -460,10 +471,41 @@ onMounted(() => {
   gap: var(--spacing-lg);
 }
 
+.main-layout {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+.main-layout.two-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-lg);
+  align-items: start;
+}
+
+@media (max-width: 1024px) {
+  .main-layout.two-columns {
+    grid-template-columns: 1fr;
+  }
+}
+
 .form {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-lg);
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--spacing-lg);
+}
+
+@media (max-width: 768px) {
+  .form-row {
+    grid-template-columns: 1fr;
+  }
 }
 
 .form-field {
@@ -517,9 +559,6 @@ onMounted(() => {
 }
 
 /* Addresses section */
-.addresses-card {
-  margin-top: var(--spacing-md);
-}
 
 .section-header {
   display: flex;

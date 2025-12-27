@@ -125,38 +125,45 @@ onMounted(loadSupplier)
     <Card>
       <template #content>
         <form @submit.prevent="save" class="form">
-          <div class="form-field">
-            <label for="name">{{ labels.fields.name }} *</label>
-            <InputText
-              id="name"
-              v-model="form.name"
-              :class="{ 'p-invalid': errors.name }"
-              :disabled="loading"
-            />
-            <small v-if="errors.name" class="p-error">{{ errors.name }}</small>
+          <!-- Fila 1: Nombre y Teléfono -->
+          <div class="form-row">
+            <div class="form-field">
+              <label for="name">{{ labels.fields.name }} *</label>
+              <InputText
+                id="name"
+                v-model="form.name"
+                :class="{ 'p-invalid': errors.name }"
+                :disabled="loading"
+              />
+              <small v-if="errors.name" class="p-error">{{ errors.name }}</small>
+            </div>
+
+            <div class="form-field">
+              <label for="phone">{{ labels.fields.phone }}</label>
+              <InputText
+                id="phone"
+                v-model="form.phone"
+                :disabled="loading"
+              />
+            </div>
           </div>
 
-          <div class="form-field">
-            <label for="phone">{{ labels.fields.phone }}</label>
-            <InputText
-              id="phone"
-              v-model="form.phone"
-              :disabled="loading"
-            />
+          <!-- Fila 2: URL -->
+          <div class="form-row">
+            <div class="form-field">
+              <label for="url">{{ labels.fields.url }}</label>
+              <InputText
+                id="url"
+                v-model="form.url"
+                :class="{ 'p-invalid': errors.url }"
+                :disabled="loading"
+                placeholder="https://..."
+              />
+              <small v-if="errors.url" class="p-error">{{ errors.url }}</small>
+            </div>
           </div>
 
-          <div class="form-field">
-            <label for="url">{{ labels.fields.url }}</label>
-            <InputText
-              id="url"
-              v-model="form.url"
-              :class="{ 'p-invalid': errors.url }"
-              :disabled="loading"
-              placeholder="https://..."
-            />
-            <small v-if="errors.url" class="p-error">{{ errors.url }}</small>
-          </div>
-
+          <!-- Fila 3: Notas -->
           <div class="form-field">
             <label for="notes">{{ labels.fields.notes }}</label>
             <Textarea
@@ -199,6 +206,18 @@ onMounted(loadSupplier)
   display: flex;
   flex-direction: column;
   gap: var(--spacing-lg);
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--spacing-lg);
+}
+
+@media (max-width: 768px) {
+  .form-row {
+    grid-template-columns: 1fr;
+  }
 }
 
 .form-field {
