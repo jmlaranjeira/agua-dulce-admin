@@ -66,8 +66,8 @@ export const labels = {
     CANCELLED: 'Cancelado',
   },
   customerType: {
-    CLIENTE: 'Cliente',
-    PROVEEDOR: 'Proveedor',
+    RETAIL: 'Minorista',
+    WHOLESALE: 'Mayorista',
     label: 'Tipo de cliente',
     wholesaleIndicator: 'Precio mayorista',
   },

@@ -26,14 +26,14 @@ const customerId = computed(() => route.params.id as string | undefined)
 const isEditMode = computed(() => !!customerId.value)
 
 const customerTypeOptions: { value: CustomerType; label: string }[] = [
-  { value: 'CLIENTE', label: labels.customerType.CLIENTE },
-  { value: 'PROVEEDOR', label: labels.customerType.PROVEEDOR },
+  { value: 'RETAIL', label: labels.customerType.RETAIL },
+  { value: 'WHOLESALE', label: labels.customerType.WHOLESALE },
 ]
 
 const form = ref<CreateCustomer>({
   phone: '',
   name: '',
-  type: 'CLIENTE',
+  type: 'RETAIL',
   notes: '',
 })
 

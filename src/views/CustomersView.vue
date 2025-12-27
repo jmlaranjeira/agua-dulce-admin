@@ -53,7 +53,7 @@ function truncateNotes(notes: string | null, maxLength = 50): string {
 }
 
 function getTypeSeverity(type: CustomerType): 'info' | 'warn' {
-  return type === 'PROVEEDOR' ? 'warn' : 'info'
+  return type === 'WHOLESALE' ? 'warn' : 'info'
 }
 
 onMounted(loadCustomers)

@@ -30,7 +30,7 @@ export interface RegisterRequest {
 // ===========================================
 export type OrderStatus = 'PENDING' | 'PAID' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED'
 export type StockMovementType = 'PURCHASE' | 'SALE' | 'ADJUSTMENT' | 'RETURN'
-export type CustomerType = 'CLIENTE' | 'PROVEEDOR'
+export type CustomerType = 'RETAIL' | 'WHOLESALE'
 
 // ===========================================
 // Response types (lo que devuelve la API)

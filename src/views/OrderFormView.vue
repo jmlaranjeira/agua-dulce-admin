@@ -50,7 +50,7 @@ const showNewCustomerDialog = ref(false)
 const newCustomerForm = ref<CreateCustomer>({
   phone: '',
   name: '',
-  type: 'CLIENTE',
+  type: 'RETAIL',
   notes: '',
 })
 const savingCustomer = ref(false)
@@ -73,11 +73,11 @@ const customerOptions = computed(() =>
   }))
 )
 
-const isWholesaleCustomer = computed(() => selectedCustomer.value?.type === 'PROVEEDOR')
+const isWholesaleCustomer = computed(() => selectedCustomer.value?.type === 'WHOLESALE')
 
 const customerTypeOptions: { value: CustomerType; label: string }[] = [
-  { value: 'CLIENTE', label: labels.customerType.CLIENTE },
-  { value: 'PROVEEDOR', label: labels.customerType.PROVEEDOR },
+  { value: 'RETAIL', label: labels.customerType.RETAIL },
+  { value: 'WHOLESALE', label: labels.customerType.WHOLESALE },
 ]
 
 function getEffectivePrice(product: Product): number {
@@ -264,7 +264,7 @@ async function saveNewCustomer() {
     customers.value.push(customer)
     selectedCustomer.value = customer
     showNewCustomerDialog.value = false
-    newCustomerForm.value = { phone: '', name: '', type: 'CLIENTE', notes: '' }
+    newCustomerForm.value = { phone: '', name: '', type: 'RETAIL', notes: '' }
     toast.add({
       severity: 'success',
       summary: 'OK',
