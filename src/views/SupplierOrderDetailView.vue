@@ -9,11 +9,13 @@ import Column from 'primevue/column'
 import ImageThumbnail from '@/components/ImageThumbnail.vue'
 import { api } from '@/services/api'
 import { labels } from '@/locales/es'
+import { useBreakpoints } from '@/composables/useBreakpoints'
 import type { SupplierOrder } from '@/types'
 
 const route = useRoute()
 const router = useRouter()
 const toast = useToast()
+const { isMobile } = useBreakpoints()
 
 const orderId = computed(() => route.params.id as string)
 const order = ref<SupplierOrder | null>(null)
@@ -89,12 +91,23 @@ onMounted(loadOrder)
             </div>
           </div>
           <div class="header-right">
+            <!-- Desktop: icon button -->
             <Button
-              v-if="order.pdfUrl"
+              v-if="order.pdfUrl && !isMobile"
               icon="pi pi-file-pdf"
               severity="danger"
               outlined
               v-tooltip.bottom="labels.supplierOrders.downloadPdf"
+              @click="downloadPdf"
+            />
+            <!-- Mobile: full-width labeled button -->
+            <Button
+              v-if="order.pdfUrl && isMobile"
+              icon="pi pi-file-pdf"
+              label="Descargar PDF"
+              severity="danger"
+              outlined
+              class="w-full"
               @click="downloadPdf"
             />
           </div>
@@ -135,7 +148,8 @@ onMounted(loadOrder)
         {{ labels.supplierOrders.orderItems }} ({{ order.items?.length || 0 }})
       </template>
       <template #content>
-        <DataTable :value="order.items" class="items-table">
+        <!-- Desktop: Table -->
+        <DataTable v-if="!isMobile" :value="order.items" class="items-table">
           <Column header="" style="width: 70px">
             <template #body="{ data }">
               <ImageThumbnail :src="data.product.imageUrl" :size="50" :preview-size="180" />
@@ -157,7 +171,7 @@ onMounted(loadOrder)
             </template>
           </Column>
 
-          <Column :header="labels.fields.unitCost" style="width: 120px">
+          <Column :header="labels.fields.unitCost" style="width: 120px" class="hidden-tablet">
             <template #body="{ data }">
               {{ formatCurrency(data.unitCost, order!.currency) }}
             </template>
@@ -169,6 +183,26 @@ onMounted(loadOrder)
             </template>
           </Column>
         </DataTable>
+
+        <!-- Mobile: Cards -->
+        <div v-else class="mobile-items-list">
+          <div
+            v-for="item in order.items"
+            :key="item.id"
+            class="mobile-item-card"
+          >
+            <ImageThumbnail :src="item.product.imageUrl" :size="60" :preview-size="180" />
+            <div class="mobile-item-info">
+              <div class="mobile-item-name">{{ item.product.name }}</div>
+              <div class="mobile-item-details">
+                {{ item.quantity }} × {{ formatCurrency(item.unitCost, order!.currency) }}
+              </div>
+            </div>
+            <div class="mobile-item-total">
+              {{ formatCurrency(item.totalCost, order!.currency) }}
+            </div>
+          </div>
+        </div>
 
         <div class="totals-section">
           <div class="total-row">
@@ -359,18 +393,73 @@ onMounted(loadOrder)
   color: var(--color-text-muted);
 }
 
+.w-full {
+  width: 100%;
+}
+
+/* Mobile item cards */
+.mobile-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.mobile-item-card {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-sm);
+  background-color: #f8fafc;
+  border-radius: var(--border-radius);
+}
+
+.mobile-item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.mobile-item-name {
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mobile-item-details {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.mobile-item-total {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Hide column on tablet */
+@media (max-width: 1024px) {
+  .hidden-tablet :deep(th),
+  .hidden-tablet :deep(td) {
+    display: none;
+  }
+}
+
 @media (max-width: 768px) {
   .order-header {
     flex-direction: column;
     align-items: flex-start;
+    gap: var(--spacing-md);
   }
 
   .header-right {
     width: 100%;
   }
 
-  .header-right button {
-    width: 100%;
+  .totals-section {
+    align-items: stretch;
+  }
+
+  .total-row {
+    min-width: auto;
   }
 }
 </style>

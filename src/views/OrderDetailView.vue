@@ -13,12 +13,14 @@ import { api } from '@/services/api'
 import { generateOrderPdf } from '@/services/pdfGenerator'
 import { labels } from '@/locales/es'
 import { useOrderMargin } from '@/composables/useOrderMargin'
+import { useBreakpoints } from '@/composables/useBreakpoints'
 import type { Order, OrderStatus } from '@/types'
 
 const route = useRoute()
 const router = useRouter()
 const toast = useToast()
 const confirm = useConfirm()
+const { isMobile } = useBreakpoints()
 
 const orderId = computed(() => route.params.id as string)
 const order = ref<Order | null>(null)
@@ -247,7 +249,8 @@ onMounted(loadOrder)
             </div>
           </div>
           <div class="header-right">
-            <div class="action-buttons" v-if="canMarkPaid || canMarkShipped || canMarkDelivered || canCancel">
+            <!-- Desktop: action buttons inline -->
+            <div v-if="!isMobile" class="action-buttons" v-show="canMarkPaid || canMarkShipped || canMarkDelivered || canCancel">
               <Button
                 v-if="canMarkPaid"
                 :label="labels.orders.markAsPaid"
@@ -282,7 +285,8 @@ onMounted(loadOrder)
                 @click="confirmCancel"
               />
             </div>
-            <div class="utility-buttons">
+            <!-- Desktop: utility icon buttons -->
+            <div v-if="!isMobile" class="utility-buttons">
               <Button
                 icon="pi pi-file-pdf"
                 severity="danger"
@@ -302,6 +306,62 @@ onMounted(loadOrder)
                 severity="success"
                 v-tooltip.bottom="labels.orders.sendWhatsApp"
                 @click="openWhatsApp"
+              />
+            </div>
+
+            <!-- Mobile: Full-width labeled buttons -->
+            <div v-else class="mobile-actions">
+              <Button
+                v-if="canMarkPaid"
+                :label="labels.orders.markAsPaid"
+                icon="pi pi-dollar"
+                severity="info"
+                :loading="updating"
+                class="w-full"
+                @click="updateStatus('PAID')"
+              />
+              <Button
+                v-if="canMarkShipped"
+                :label="labels.orders.markAsShipped"
+                icon="pi pi-send"
+                severity="secondary"
+                :loading="updating"
+                class="w-full"
+                @click="updateStatus('SHIPPED')"
+              />
+              <Button
+                v-if="canMarkDelivered"
+                :label="labels.orders.markAsDelivered"
+                icon="pi pi-check-circle"
+                severity="success"
+                :loading="updating"
+                class="w-full"
+                @click="updateStatus('DELIVERED')"
+              />
+              <Button
+                icon="pi pi-whatsapp"
+                label="Enviar WhatsApp"
+                severity="success"
+                class="w-full"
+                @click="openWhatsApp"
+              />
+              <Button
+                icon="pi pi-file-pdf"
+                label="Descargar PDF"
+                severity="danger"
+                outlined
+                class="w-full"
+                @click="generateOrderPdf(order!)"
+              />
+              <Button
+                v-if="canCancel"
+                icon="pi pi-times"
+                :label="labels.orders.cancelOrder"
+                severity="danger"
+                outlined
+                :loading="updating"
+                class="w-full"
+                @click="confirmCancel"
               />
             </div>
           </div>
@@ -354,10 +414,11 @@ onMounted(loadOrder)
     <!-- Order Items -->
     <Card>
       <template #title>
-        {{ labels.orders.orderItems }}
+        {{ labels.orders.orderItems }} ({{ order.items.length }})
       </template>
       <template #content>
-        <DataTable :value="order.items" class="items-table">
+        <!-- Desktop: Table -->
+        <DataTable v-if="!isMobile" :value="order.items" class="items-table">
           <Column header="" style="width: 70px">
             <template #body="{ data }">
               <ImageThumbnail :src="data.product.imageUrl" :size="50" :preview-size="180" />
@@ -379,7 +440,7 @@ onMounted(loadOrder)
             </template>
           </Column>
 
-          <Column header="Margen" style="width: 80px">
+          <Column header="Margen" style="width: 80px" class="hidden-tablet">
             <template #body="{ data }">
               <span v-if="data.product.costPrice" class="margin-badge" :class="getMarginClass(data)">
                 {{ calculateItemMargin(data) }}%
@@ -401,8 +462,28 @@ onMounted(loadOrder)
           </Column>
         </DataTable>
 
+        <!-- Mobile: Cards -->
+        <div v-else class="mobile-items-list">
+          <div
+            v-for="item in order.items"
+            :key="item.id"
+            class="mobile-item-card"
+          >
+            <ImageThumbnail :src="item.product.imageUrl" :size="60" :preview-size="180" />
+            <div class="mobile-item-info">
+              <div class="mobile-item-name">{{ item.product.name }}</div>
+              <div class="mobile-item-details">
+                {{ item.quantity }} × {{ formatCurrency(item.unitPrice) }}
+              </div>
+            </div>
+            <div class="mobile-item-subtotal">
+              {{ formatCurrency(item.unitPrice * item.quantity) }}
+            </div>
+          </div>
+        </div>
+
         <div class="total-row">
-          <div class="total-margin" v-if="totalMargin !== null">
+          <div class="total-margin" v-if="totalMargin !== null && !isMobile">
             <span class="margin-label">Margen:</span>
             <span class="margin-badge" :class="getTotalMarginClass()">
               {{ formatCurrency(totalMarginAmount!) }} ({{ totalMargin.toFixed(0) }}%)
@@ -657,6 +738,64 @@ onMounted(loadOrder)
   color: var(--color-text-muted);
 }
 
+/* Mobile actions */
+.mobile-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  width: 100%;
+}
+
+.w-full {
+  width: 100%;
+}
+
+/* Mobile item cards */
+.mobile-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.mobile-item-card {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-sm);
+  background-color: #f8fafc;
+  border-radius: var(--border-radius);
+}
+
+.mobile-item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.mobile-item-name {
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mobile-item-details {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.mobile-item-subtotal {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Hide margin column on tablet */
+@media (max-width: 1024px) {
+  .hidden-tablet :deep(th),
+  .hidden-tablet :deep(td) {
+    display: none;
+  }
+}
+
 @media (max-width: 768px) {
   .order-header {
     flex-direction: column;
@@ -671,21 +810,18 @@ onMounted(loadOrder)
     gap: var(--spacing-sm);
   }
 
-  .action-buttons {
-    flex-wrap: wrap;
-  }
-
-  .action-buttons button {
-    flex: 1;
-    min-width: fit-content;
-  }
-
-  .utility-buttons {
-    justify-content: flex-start;
-  }
-
   .customer-shipping-row {
     grid-template-columns: 1fr;
+  }
+
+  .total-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--spacing-md);
+  }
+
+  .total-amount {
+    justify-content: space-between;
   }
 }
 </style>

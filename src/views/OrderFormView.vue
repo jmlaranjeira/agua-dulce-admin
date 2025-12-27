@@ -20,6 +20,7 @@ import ImageThumbnail from '@/components/ImageThumbnail.vue'
 import { api } from '@/services/api'
 import { labels } from '@/locales/es'
 import { useOrderMargin } from '@/composables/useOrderMargin'
+import { useBreakpoints } from '@/composables/useBreakpoints'
 import type { Customer, Product, CreateOrder, CreateCustomer, CustomerAddress, Category, CustomerType } from '@/types'
 
 type OrderItemForm = {
@@ -30,6 +31,7 @@ type OrderItemForm = {
 
 const router = useRouter()
 const toast = useToast()
+const { isMobile } = useBreakpoints()
 
 const customers = ref<Customer[]>([])
 const products = ref<Product[]>([])
@@ -477,8 +479,8 @@ onMounted(() => {
               />
             </div>
 
-            <!-- Order Items Table -->
-            <DataTable :value="orderItems" class="items-table">
+            <!-- Order Items Table (Desktop) -->
+            <DataTable v-if="!isMobile" :value="orderItems" class="items-table">
               <template #empty>
                 <div class="empty-cart">
                   {{ labels.orders.emptyCart }}
@@ -513,7 +515,7 @@ onMounted(() => {
                 </template>
               </Column>
 
-              <Column header="Margen" style="width: 90px">
+              <Column header="Margen" style="width: 90px" class="hidden-tablet">
                 <template #body="{ data }">
                   <span v-if="data.product.costPrice" class="margin-badge" :class="getMarginClass(data)">
                     {{ calculateMargin(data) }}%
@@ -553,6 +555,46 @@ onMounted(() => {
                 </template>
               </Column>
             </DataTable>
+
+            <!-- Order Items Cards (Mobile) -->
+            <div v-else class="mobile-items-list">
+              <div v-if="orderItems.length === 0" class="empty-cart">
+                {{ labels.orders.emptyCart }}
+              </div>
+              <div
+                v-for="(item, index) in orderItems"
+                :key="item.product.id"
+                class="mobile-item-card"
+              >
+                <ImageThumbnail :src="item.product.imageUrl" :size="50" :preview-size="180" />
+                <div class="mobile-item-content">
+                  <div class="mobile-item-name">{{ item.product.name }}</div>
+                  <div class="mobile-item-price">
+                    {{ formatCurrency(item.unitPrice) }}
+                    <i v-if="hasWholesalePrice(item.product)" class="pi pi-tag wholesale-icon" />
+                  </div>
+                  <div class="mobile-item-quantity-row">
+                    <InputNumber
+                      v-model="item.quantity"
+                      :min="1"
+                      :max="99"
+                      showButtons
+                      buttonLayout="horizontal"
+                      class="mobile-quantity-input"
+                    />
+                    <span class="mobile-item-subtotal">{{ formatCurrency(item.unitPrice * item.quantity) }}</span>
+                  </div>
+                </div>
+                <Button
+                  icon="pi pi-trash"
+                  text
+                  rounded
+                  severity="danger"
+                  @click="removeItem(index)"
+                  class="mobile-item-delete"
+                />
+              </div>
+            </div>
           </div>
 
           <!-- Fila 3: Notas + Resumen -->
@@ -1125,6 +1167,82 @@ onMounted(() => {
   }
 }
 
+/* Hide column on tablet */
+@media (max-width: 1024px) {
+  .hidden-tablet :deep(th),
+  .hidden-tablet :deep(td) {
+    display: none;
+  }
+}
+
+/* Mobile item cards */
+.mobile-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-sm);
+}
+
+.mobile-item-card {
+  display: flex;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+  background-color: #f8fafc;
+  border-radius: var(--border-radius);
+  position: relative;
+}
+
+.mobile-item-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.mobile-item-name {
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mobile-item-price {
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.mobile-item-quantity-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-xs);
+}
+
+.mobile-quantity-input {
+  width: 110px;
+}
+
+.mobile-quantity-input :deep(input) {
+  width: 100%;
+  text-align: center;
+}
+
+.mobile-item-subtotal {
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.mobile-item-delete {
+  position: absolute;
+  top: 0.25rem;
+  right: 0.25rem;
+}
+
 @media (max-width: 768px) {
   .customer-row {
     flex-direction: column;
@@ -1163,6 +1281,18 @@ onMounted(() => {
 
   .summary-card {
     order: -1;
+  }
+
+  .form-actions {
+    flex-direction: column-reverse;
+  }
+
+  .form-actions button {
+    width: 100%;
+  }
+
+  .dialog-form {
+    min-width: auto;
   }
 }
 </style>

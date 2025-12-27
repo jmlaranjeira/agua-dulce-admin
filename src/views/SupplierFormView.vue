@@ -246,4 +246,14 @@ onMounted(loadSupplier)
 .p-error {
   color: var(--p-red-500, #ef4444);
 }
+
+@media (max-width: 768px) {
+  .form-actions {
+    flex-direction: column-reverse;
+  }
+
+  .form-actions button {
+    width: 100%;
+  }
+}
 </style>

@@ -15,12 +15,14 @@ import ConfirmDialog from 'primevue/confirmdialog'
 import AddressDialog from '@/components/AddressDialog.vue'
 import { api } from '@/services/api'
 import { labels } from '@/locales/es'
+import { useBreakpoints } from '@/composables/useBreakpoints'
 import type { CreateCustomer, UpdateCustomer, Order, CustomerAddress, CustomerType } from '@/types'
 
 const route = useRoute()
 const router = useRouter()
 const toast = useToast()
 const confirm = useConfirm()
+const { isMobile } = useBreakpoints()
 
 const customerId = computed(() => route.params.id as string | undefined)
 const isEditMode = computed(() => !!customerId.value)
@@ -421,7 +423,9 @@ onMounted(() => {
         {{ labels.customers.ordersSection }}
       </template>
       <template #content>
+        <!-- Desktop: Table -->
         <DataTable
+          v-if="!isMobile"
           :value="orders"
           :loading="loadingOrders"
           stripedRows
@@ -459,6 +463,33 @@ onMounted(() => {
             </template>
           </Column>
         </DataTable>
+
+        <!-- Mobile: Cards -->
+        <div v-else class="mobile-orders-list">
+          <div v-if="loadingOrders" class="loading-state">
+            <i class="pi pi-spin pi-spinner"></i>
+          </div>
+          <template v-else>
+            <div
+              v-for="order in orders"
+              :key="order.id"
+              class="mobile-order-card"
+              @click="goToOrder(order.id)"
+            >
+              <div class="mobile-order-header">
+                <span class="order-number">#{{ order.number }}</span>
+                <Tag :value="labels.status[order.status as keyof typeof labels.status]" :severity="getStatusSeverity(order.status)" />
+              </div>
+              <div class="mobile-order-footer">
+                <span class="mobile-order-date">{{ formatDate(order.createdAt) }}</span>
+                <span class="mobile-order-total">{{ formatCurrency(calculateTotal(order)) }}</span>
+              </div>
+            </div>
+            <div v-if="orders.length === 0" class="empty-message">
+              {{ labels.customers.noOrders }}
+            </div>
+          </template>
+        </div>
       </template>
     </Card>
   </div>
@@ -529,6 +560,16 @@ onMounted(() => {
   justify-content: flex-end;
   gap: var(--spacing-md);
   padding-top: var(--spacing-md);
+}
+
+@media (max-width: 768px) {
+  .form-actions {
+    flex-direction: column-reverse;
+  }
+
+  .form-actions button {
+    width: 100%;
+  }
 }
 
 .p-error {
@@ -626,5 +667,53 @@ onMounted(() => {
   display: flex;
   justify-content: center;
   padding: 2rem;
+}
+
+/* Mobile order cards */
+.mobile-orders-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.mobile-order-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  cursor: pointer;
+}
+
+.mobile-order-card:hover {
+  background-color: #f8fafc;
+}
+
+.mobile-order-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-sm);
+}
+
+.mobile-order-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: var(--spacing-sm);
+  border-top: 1px solid var(--color-border);
+}
+
+.mobile-order-date {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.mobile-order-total {
+  font-weight: 600;
+}
+
+.loading-state i {
+  font-size: 1.5rem;
+  color: var(--color-text-muted);
 }
 </style>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
@@ -10,19 +10,46 @@ import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import IconField from 'primevue/iconfield'
 import InputIcon from 'primevue/inputicon'
+import Menu from 'primevue/menu'
 import { api } from '@/services/api'
 import { labels } from '@/locales/es'
+import { useBreakpoints } from '@/composables/useBreakpoints'
 import type { Supplier } from '@/types'
 
 const router = useRouter()
 const toast = useToast()
 const confirm = useConfirm()
+const { isMobile } = useBreakpoints()
 
 const suppliers = ref<Supplier[]>([])
 const loading = ref(true)
-const filters = ref({
-  global: { value: '', matchMode: 'contains' },
+const searchQuery = ref('')
+const mobileMenu = ref()
+const selectedSupplier = ref<Supplier | null>(null)
+
+const filteredSuppliers = computed(() => {
+  if (!searchQuery.value) return suppliers.value
+  const query = searchQuery.value.toLowerCase()
+  return suppliers.value.filter(
+    (s) =>
+      s.name.toLowerCase().includes(query) ||
+      s.phone?.toLowerCase().includes(query)
+  )
 })
+
+const mobileMenuItems = computed(() => [
+  {
+    label: labels.actions.edit,
+    icon: 'pi pi-pencil',
+    command: () => selectedSupplier.value && goToEdit(selectedSupplier.value.id),
+  },
+  {
+    label: labels.actions.delete,
+    icon: 'pi pi-trash',
+    class: 'text-red-500',
+    command: () => selectedSupplier.value && confirmDelete(selectedSupplier.value),
+  },
+])
 
 async function loadSuppliers() {
   loading.value = true
@@ -78,6 +105,19 @@ async function deleteSupplier(id: string) {
   }
 }
 
+function toggleMobileMenu(event: Event, supplier: Supplier) {
+  selectedSupplier.value = supplier
+  mobileMenu.value.toggle(event)
+}
+
+function extractDomain(url: string): string {
+  try {
+    return new URL(url).hostname.replace('www.', '')
+  } catch {
+    return url.length > 25 ? url.substring(0, 25) + '...' : url
+  }
+}
+
 onMounted(loadSuppliers)
 </script>
 
@@ -87,31 +127,30 @@ onMounted(loadSuppliers)
       <IconField class="search-box">
         <InputIcon class="pi pi-search" />
         <InputText
-          v-model="filters.global.value"
+          v-model="searchQuery"
           :placeholder="labels.actions.search"
         />
       </IconField>
       <Button
-        :label="labels.suppliers.newSupplier"
+        :label="isMobile ? undefined : labels.suppliers.newSupplier"
         icon="pi pi-plus"
         @click="goToNew"
       />
     </div>
 
-    <Card class="table-card">
+    <!-- Desktop: Tabla -->
+    <Card v-if="!isMobile" class="table-card">
       <template #content>
         <DataTable
-          v-model:filters="filters"
-          :value="suppliers"
+          :value="filteredSuppliers"
           :loading="loading"
-          :globalFilterFields="['name', 'phone']"
           paginator
           :rows="10"
           :rowsPerPageOptions="[10, 25, 50]"
           stripedRows
           rowHover
           scrollable
-          class="suppliers-table table-responsive"
+          class="suppliers-table"
         >
           <template #empty>
             <div class="empty-message">
@@ -127,7 +166,7 @@ onMounted(loadSuppliers)
             </template>
           </Column>
 
-          <Column field="url" :header="labels.fields.url">
+          <Column field="url" :header="labels.fields.url" class="hidden-tablet">
             <template #body="{ data }">
               <a
                 v-if="data.url"
@@ -135,8 +174,9 @@ onMounted(loadSuppliers)
                 target="_blank"
                 rel="noopener"
                 class="url-link"
+                v-tooltip.top="data.url"
               >
-                {{ data.url }}
+                {{ extractDomain(data.url) }}
               </a>
               <span v-else>-</span>
             </template>
@@ -166,6 +206,51 @@ onMounted(loadSuppliers)
         </DataTable>
       </template>
     </Card>
+
+    <!-- Mobile: Tarjetas -->
+    <div v-else class="mobile-list">
+      <div v-if="loading" class="loading-state">
+        <i class="pi pi-spin pi-spinner"></i>
+      </div>
+      <template v-else>
+        <div
+          v-for="supplier in filteredSuppliers"
+          :key="supplier.id"
+          class="mobile-card"
+          @click="goToEdit(supplier.id)"
+        >
+          <div class="mobile-card-header">
+            <div class="mobile-card-title">{{ supplier.name }}</div>
+            <Button
+              icon="pi pi-ellipsis-v"
+              text
+              rounded
+              size="small"
+              @click.stop="toggleMobileMenu($event, supplier)"
+            />
+          </div>
+          <div class="mobile-card-content">
+            <div v-if="supplier.phone" class="mobile-card-row">
+              <i class="pi pi-phone"></i>
+              <a :href="'tel:' + supplier.phone" @click.stop>{{ supplier.phone }}</a>
+            </div>
+            <div v-if="supplier.url" class="mobile-card-row">
+              <i class="pi pi-external-link"></i>
+              <a :href="supplier.url" target="_blank" rel="noopener" @click.stop class="url-link">
+                {{ extractDomain(supplier.url) }}
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="filteredSuppliers.length === 0" class="empty-message">
+          {{ labels.suppliers.noSuppliers }}
+        </div>
+      </template>
+    </div>
+
+    <!-- Menú contextual móvil -->
+    <Menu ref="mobileMenu" :model="mobileMenuItems" popup />
   </div>
 </template>
 
@@ -181,7 +266,6 @@ onMounted(loadSuppliers)
   justify-content: space-between;
   align-items: center;
   gap: var(--spacing-md);
-  flex-wrap: wrap;
 }
 
 .search-box {
@@ -205,7 +289,6 @@ onMounted(loadSuppliers)
   padding: 0;
 }
 
-/* Table header styling */
 .suppliers-table :deep(.p-datatable-thead > tr > th) {
   background-color: #f8fafc;
   font-weight: 600;
@@ -214,12 +297,10 @@ onMounted(loadSuppliers)
   border-bottom: 2px solid var(--color-border);
 }
 
-/* Table cells padding */
 .suppliers-table :deep(.p-datatable-tbody > tr > td) {
   padding: 0.875rem 1.25rem;
 }
 
-/* Row hover */
 .suppliers-table :deep(.p-datatable-tbody > tr:hover) {
   background-color: #f1f5f9 !important;
 }
@@ -233,7 +314,6 @@ onMounted(loadSuppliers)
 .url-link {
   color: var(--color-primary);
   text-decoration: none;
-  word-break: break-all;
 }
 
 .url-link:hover {
@@ -245,10 +325,89 @@ onMounted(loadSuppliers)
   gap: var(--spacing-xs);
 }
 
+/* Hide URL column on tablet */
+@media (max-width: 1024px) {
+  .hidden-tablet :deep(th),
+  .hidden-tablet :deep(td) {
+    display: none;
+  }
+}
+
+/* Mobile styles */
+.mobile-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.mobile-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  cursor: pointer;
+  transition: box-shadow 0.2s;
+}
+
+.mobile-card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.mobile-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--spacing-sm);
+}
+
+.mobile-card-title {
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: var(--color-text);
+}
+
+.mobile-card-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.mobile-card-row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+}
+
+.mobile-card-row i {
+  font-size: 0.8rem;
+  width: 1rem;
+}
+
+.mobile-card-row a {
+  color: var(--color-text-muted);
+  text-decoration: none;
+}
+
+.mobile-card-row a:hover {
+  color: var(--color-primary);
+}
+
+.loading-state {
+  display: flex;
+  justify-content: center;
+  padding: var(--spacing-xl);
+  color: var(--color-text-muted);
+}
+
+.loading-state i {
+  font-size: 1.5rem;
+}
+
 @media (max-width: 768px) {
   .view-header {
-    flex-direction: column;
-    align-items: stretch;
+    flex-direction: row;
   }
 
   .search-box {

@@ -8,9 +8,11 @@ import Select from 'primevue/select'
 import Tag from 'primevue/tag'
 import { api } from '@/services/api'
 import { labels } from '@/locales/es'
+import { useBreakpoints } from '@/composables/useBreakpoints'
 import type { StockMovement, Product, StockMovementType } from '@/types'
 
 const toast = useToast()
+const { isMobile } = useBreakpoints()
 
 const movements = ref<StockMovement[]>([])
 const products = ref<Product[]>([])
@@ -90,6 +92,14 @@ function formatDate(dateString: string): string {
   })
 }
 
+function formatDateShort(dateString: string): string {
+  return new Date(dateString).toLocaleDateString('es-ES', {
+    day: '2-digit',
+    month: '2-digit',
+    year: '2-digit',
+  })
+}
+
 function onProductFilterChange() {
   loadMovements()
 }
@@ -115,6 +125,7 @@ onMounted(async () => {
           @change="onProductFilterChange"
         />
         <Select
+          v-if="!isMobile"
           v-model="typeFilter"
           :options="typeOptions"
           optionLabel="label"
@@ -125,7 +136,8 @@ onMounted(async () => {
       </div>
     </div>
 
-    <Card class="table-card">
+    <!-- Desktop: Tabla -->
+    <Card v-if="!isMobile" class="table-card">
       <template #content>
         <DataTable
           :value="filteredMovements"
@@ -173,13 +185,13 @@ onMounted(async () => {
             </template>
           </Column>
 
-          <Column :header="labels.fields.reference">
+          <Column :header="labels.fields.reference" class="hidden-tablet">
             <template #body="{ data }">
               {{ data.reference || '-' }}
             </template>
           </Column>
 
-          <Column :header="labels.fields.notes">
+          <Column :header="labels.fields.notes" class="hidden-tablet">
             <template #body="{ data }">
               {{ data.notes || '-' }}
             </template>
@@ -187,6 +199,41 @@ onMounted(async () => {
         </DataTable>
       </template>
     </Card>
+
+    <!-- Mobile: Tarjetas -->
+    <div v-else class="mobile-list">
+      <div v-if="loading" class="loading-state">
+        <i class="pi pi-spin pi-spinner"></i>
+      </div>
+      <template v-else>
+        <div
+          v-for="movement in filteredMovements"
+          :key="movement.id"
+          class="mobile-card"
+        >
+          <div class="mobile-card-header">
+            <div class="mobile-card-product">
+              <span class="product-code">{{ movement.product?.code || '-' }}</span>
+              <span class="product-name">{{ movement.product?.name || '' }}</span>
+            </div>
+            <Tag :value="getTypeLabel(movement.type)" :severity="getTypeSeverity(movement.type)" />
+          </div>
+          <div class="mobile-card-footer">
+            <span class="mobile-card-date">{{ formatDateShort(movement.createdAt) }}</span>
+            <span
+              class="mobile-card-quantity"
+              :class="{ 'text-positive': movement.quantity > 0, 'text-negative': movement.quantity < 0 }"
+            >
+              {{ movement.quantity > 0 ? '+' : '' }}{{ movement.quantity }} uds
+            </span>
+          </div>
+        </div>
+
+        <div v-if="filteredMovements.length === 0" class="empty-message">
+          {{ labels.stock.noMovements }}
+        </div>
+      </template>
+    </div>
   </div>
 </template>
 
@@ -276,13 +323,74 @@ onMounted(async () => {
   font-weight: 600;
 }
 
-@media (max-width: 768px) {
-  .filters {
-    flex-direction: column;
+/* Hide columns on tablet */
+@media (max-width: 1024px) {
+  .hidden-tablet :deep(th),
+  .hidden-tablet :deep(td) {
+    display: none;
   }
+}
 
+/* Mobile styles */
+.mobile-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.mobile-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+}
+
+.mobile-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-sm);
+}
+
+.mobile-card-product {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mobile-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: var(--spacing-sm);
+  border-top: 1px solid var(--color-border);
+}
+
+.mobile-card-date {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.mobile-card-quantity {
+  font-size: 1.1rem;
+}
+
+.loading-state {
+  display: flex;
+  justify-content: center;
+  padding: var(--spacing-xl);
+  color: var(--color-text-muted);
+}
+
+.loading-state i {
+  font-size: 1.5rem;
+}
+
+@media (max-width: 768px) {
   .filter-select {
     min-width: auto;
+    flex: 1;
   }
 }
 </style>

@@ -8,13 +8,19 @@ import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Button from 'primevue/button'
 import Select from 'primevue/select'
+import Menu from 'primevue/menu'
 import { api } from '@/services/api'
 import { labels } from '@/locales/es'
+import { useBreakpoints } from '@/composables/useBreakpoints'
 import type { SupplierOrder, Supplier } from '@/types'
 
 const router = useRouter()
 const toast = useToast()
 const confirm = useConfirm()
+const { isMobile } = useBreakpoints()
+
+const mobileMenu = ref()
+const selectedOrder = ref<SupplierOrder | null>(null)
 
 const orders = ref<SupplierOrder[]>([])
 const suppliers = ref<Supplier[]>([])
@@ -31,6 +37,31 @@ const sortedOrders = computed(() => {
   return [...orders.value].sort(
     (a, b) => new Date(b.invoiceDate).getTime() - new Date(a.invoiceDate).getTime()
   )
+})
+
+const mobileMenuItems = computed(() => {
+  const items = []
+  if (selectedOrder.value?.pdfUrl) {
+    items.push({
+      label: labels.supplierOrders.viewPdf,
+      icon: 'pi pi-file-pdf',
+      command: () => selectedOrder.value && openPdf(selectedOrder.value.pdfUrl!),
+    })
+  }
+  items.push(
+    {
+      label: labels.actions.edit,
+      icon: 'pi pi-eye',
+      command: () => selectedOrder.value && goToDetail(selectedOrder.value.id),
+    },
+    {
+      label: labels.actions.delete,
+      icon: 'pi pi-trash',
+      class: 'text-red-500',
+      command: () => selectedOrder.value && confirmDelete(selectedOrder.value),
+    }
+  )
+  return items
 })
 
 async function loadData() {
@@ -113,6 +144,11 @@ function onFilterChange() {
   loadData()
 }
 
+function toggleMobileMenu(event: Event, order: SupplierOrder) {
+  selectedOrder.value = order
+  mobileMenu.value.toggle(event)
+}
+
 onMounted(loadData)
 </script>
 
@@ -133,7 +169,8 @@ onMounted(loadData)
       </div>
     </div>
 
-    <Card class="table-card">
+    <!-- Desktop: Tabla -->
+    <Card v-if="!isMobile" class="table-card">
       <template #content>
         <DataTable
           :value="sortedOrders"
@@ -171,7 +208,7 @@ onMounted(loadData)
             </template>
           </Column>
 
-          <Column :header="labels.supplierOrders.itemCount" style="width: 100px">
+          <Column :header="labels.supplierOrders.itemCount" style="width: 100px" class="hidden-tablet">
             <template #body="{ data }">
               {{ data.itemCount }}
             </template>
@@ -216,6 +253,46 @@ onMounted(loadData)
         </DataTable>
       </template>
     </Card>
+
+    <!-- Mobile: Tarjetas -->
+    <div v-else class="mobile-list">
+      <div v-if="loading" class="loading-state">
+        <i class="pi pi-spin pi-spinner"></i>
+      </div>
+      <template v-else>
+        <div
+          v-for="order in sortedOrders"
+          :key="order.id"
+          class="mobile-card"
+          @click="goToDetail(order.id)"
+        >
+          <div class="mobile-card-header">
+            <div>
+              <div class="mobile-card-invoice">#{{ order.invoiceNumber }}</div>
+              <div class="mobile-card-supplier">{{ order.supplier.name }}</div>
+            </div>
+            <Button
+              icon="pi pi-ellipsis-v"
+              text
+              rounded
+              size="small"
+              @click.stop="toggleMobileMenu($event, order)"
+            />
+          </div>
+          <div class="mobile-card-footer">
+            <span class="mobile-card-date">{{ formatDate(order.invoiceDate) }}</span>
+            <span class="mobile-card-total">{{ formatCurrency(order.totalAmount, order.currency) }}</span>
+          </div>
+        </div>
+
+        <div v-if="sortedOrders.length === 0" class="empty-message">
+          {{ labels.supplierOrders.noOrders }}
+        </div>
+      </template>
+    </div>
+
+    <!-- Menú contextual móvil -->
+    <Menu ref="mobileMenu" :model="mobileMenuItems" popup />
   </div>
 </template>
 
@@ -293,13 +370,87 @@ onMounted(loadData)
   gap: var(--spacing-xs);
 }
 
-@media (max-width: 768px) {
-  .filters {
-    flex-direction: column;
+/* Hide columns on tablet */
+@media (max-width: 1024px) {
+  .hidden-tablet :deep(th),
+  .hidden-tablet :deep(td) {
+    display: none;
   }
+}
 
+/* Mobile styles */
+.mobile-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.mobile-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  cursor: pointer;
+  transition: box-shadow 0.2s;
+}
+
+.mobile-card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.mobile-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--spacing-sm);
+}
+
+.mobile-card-invoice {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--p-primary-color);
+}
+
+.mobile-card-supplier {
+  font-weight: 500;
+  color: var(--color-text);
+  margin-top: 2px;
+}
+
+.mobile-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: var(--spacing-sm);
+  border-top: 1px solid var(--color-border);
+}
+
+.mobile-card-date {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.mobile-card-total {
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: var(--color-text);
+}
+
+.loading-state {
+  display: flex;
+  justify-content: center;
+  padding: var(--spacing-xl);
+  color: var(--color-text-muted);
+}
+
+.loading-state i {
+  font-size: 1.5rem;
+}
+
+@media (max-width: 768px) {
   .filter-select {
     min-width: auto;
+    flex: 1;
   }
 }
 </style>

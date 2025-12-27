@@ -473,5 +473,13 @@ onMounted(loadData)
   .price-row {
     grid-template-columns: 1fr;
   }
+
+  .form-actions {
+    flex-direction: column-reverse;
+  }
+
+  .form-actions button {
+    width: 100%;
+  }
 }
 </style>
