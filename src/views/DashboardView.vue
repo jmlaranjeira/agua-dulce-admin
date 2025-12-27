@@ -10,10 +10,12 @@ import Tag from 'primevue/tag'
 import Chart from 'primevue/chart'
 import { api } from '@/services/api'
 import { labels } from '@/locales/es'
+import { useBreakpoints } from '@/composables/useBreakpoints'
 import type { DashboardStats } from '@/types'
 
 const router = useRouter()
 const toast = useToast()
+const { isMobile } = useBreakpoints()
 
 const stats = ref<DashboardStats | null>(null)
 const loading = ref(true)
@@ -35,12 +37,23 @@ const chartData = computed(() => {
   }
 })
 
-const chartOptions = {
+const chartOptions = computed(() => ({
   plugins: {
-    legend: { position: 'bottom' as const },
+    legend: { display: false },
   },
   cutout: '60%',
-}
+  responsive: true,
+  maintainAspectRatio: true,
+}))
+
+const legendItems = computed(() => {
+  if (!stats.value) return []
+  return [
+    { label: labels.status.PENDING, value: stats.value.pendingOrders, color: '#f59e0b' },
+    { label: labels.status.PAID, value: stats.value.paidOrders, color: '#3b82f6' },
+    { label: labels.status.SHIPPED, value: stats.value.shippedOrders, color: '#8b5cf6' },
+  ]
+})
 
 async function loadStats() {
   loading.value = true
@@ -181,8 +194,17 @@ onMounted(loadStats)
       <Card class="chart-card">
         <template #title>Estado de pedidos</template>
         <template #content>
-          <div class="chart-container" v-if="chartData && (stats.pendingOrders + stats.paidOrders + stats.shippedOrders) > 0">
-            <Chart type="doughnut" :data="chartData" :options="chartOptions" />
+          <div class="chart-wrapper" v-if="chartData && (stats.pendingOrders + stats.paidOrders + stats.shippedOrders) > 0">
+            <div class="chart-container" :class="{ 'chart-mobile': isMobile }">
+              <Chart type="doughnut" :data="chartData" :options="chartOptions" />
+            </div>
+            <div class="chart-legend">
+              <div v-for="item in legendItems" :key="item.label" class="legend-item">
+                <span class="legend-dot" :style="{ backgroundColor: item.color }"></span>
+                <span class="legend-label">{{ item.label }}</span>
+                <span class="legend-value">({{ item.value }})</span>
+              </div>
+            </div>
           </div>
           <div class="empty-chart" v-else>
             <i class="pi pi-chart-pie"></i>
@@ -233,12 +255,15 @@ onMounted(loadStats)
             icon="pi pi-arrow-right"
             iconPos="right"
             text
+            size="small"
             @click="goToOrders"
           />
         </div>
       </template>
       <template #content>
+        <!-- Desktop: Table -->
         <DataTable
+          v-if="!isMobile"
           :value="stats.recentOrders"
           :loading="loading"
           class="recent-orders-table"
@@ -273,12 +298,38 @@ onMounted(loadStats)
             </template>
           </Column>
 
-          <Column field="createdAt" :header="labels.fields.date">
+          <Column field="createdAt" :header="labels.fields.date" class="hidden-tablet">
             <template #body="{ data }">
               {{ formatDate(data.createdAt) }}
             </template>
           </Column>
         </DataTable>
+
+        <!-- Mobile: Compact list -->
+        <div v-else class="mobile-orders-list">
+          <div class="empty-message" v-if="!stats.recentOrders?.length">
+            {{ labels.orders.noOrders }}
+          </div>
+          <div
+            v-for="order in stats.recentOrders"
+            :key="order.id"
+            class="mobile-order-card"
+            @click="goToOrder(order.id)"
+          >
+            <div class="mobile-order-left">
+              <div class="mobile-order-number">{{ order.number }}</div>
+              <div class="mobile-order-customer">{{ order.customerName }}</div>
+            </div>
+            <div class="mobile-order-right">
+              <div class="mobile-order-total">{{ formatCurrency(order.total) }}</div>
+              <Tag
+                :value="labels.status[order.status as keyof typeof labels.status]"
+                :severity="getStatusSeverity(order.status)"
+                size="small"
+              />
+            </div>
+          </div>
+        </div>
       </template>
     </Card>
   </div>
@@ -395,9 +446,54 @@ onMounted(loadStats)
   border-radius: 12px;
 }
 
+.chart-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
 .chart-container {
   max-width: 280px;
-  margin: 0 auto;
+  width: 280px;
+  height: 280px;
+}
+
+.chart-container.chart-mobile {
+  max-width: 200px;
+  width: 200px;
+  height: 200px;
+}
+
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--spacing-md);
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.legend-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.legend-label {
+  font-size: 0.875rem;
+  color: var(--color-text);
+}
+
+.legend-value {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text);
 }
 
 .empty-chart {
@@ -494,6 +590,64 @@ onMounted(loadStats)
   color: var(--color-text-muted);
 }
 
+/* Mobile orders list */
+.mobile-orders-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.mobile-order-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background-color: #f8fafc;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.mobile-order-card:hover {
+  background-color: #f1f5f9;
+}
+
+.mobile-order-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mobile-order-number {
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+.mobile-order-customer {
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+}
+
+.mobile-order-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.mobile-order-total {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+/* Hidden tablet column */
+@media (max-width: 1024px) {
+  .hidden-tablet :deep(th),
+  .hidden-tablet :deep(td) {
+    display: none;
+  }
+}
+
 /* Responsive */
 @media (max-width: 1024px) {
   .metrics-grid {
@@ -511,6 +665,10 @@ onMounted(loadStats)
     align-items: flex-start;
   }
 
+  .dashboard-header h1 {
+    font-size: 1.5rem;
+  }
+
   .quick-actions {
     width: 100%;
   }
@@ -519,8 +677,28 @@ onMounted(loadStats)
     flex: 1;
   }
 
+  /* Keep 2x2 grid on mobile for KPI cards */
   .metrics-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--spacing-sm);
+  }
+
+  .metric-card :deep(.p-card-body) {
+    padding: var(--spacing-md);
+  }
+
+  .metric-value {
+    font-size: 1.25rem;
+  }
+
+  .metric-icon {
+    font-size: 1.5rem;
+    padding: var(--spacing-sm);
+  }
+
+  .orders-header {
+    flex-wrap: wrap;
+    gap: var(--spacing-sm);
   }
 }
 </style>
