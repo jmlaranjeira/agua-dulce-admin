@@ -97,7 +97,8 @@ export const labels = {
     newCustomer: 'Nuevo cliente',
     noCustomers: 'No hay clientes registrados',
     savedSuccess: 'Cliente guardado correctamente',
-    ordersSection: 'Pedidos de este cliente',
+    customerData: 'Datos del cliente',
+    ordersSection: 'Pedidos del cliente',
     noOrders: 'Este cliente no tiene pedidos',
   },
   address: {

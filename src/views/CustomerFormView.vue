@@ -264,6 +264,9 @@ onMounted(() => {
     <div class="main-layout" :class="{ 'two-columns': isEditMode }">
       <!-- Card Formulario -->
       <Card>
+        <template #title>
+          {{ labels.customers.customerData }}
+        </template>
         <template #content>
           <form @submit.prevent="save" class="form">
             <!-- Fila 1: Teléfono y Nombre -->
