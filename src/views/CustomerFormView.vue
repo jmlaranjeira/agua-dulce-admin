@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
@@ -48,6 +48,11 @@ const loadingAddresses = ref(false)
 const saving = ref(false)
 const showAddressDialog = ref(false)
 const editingAddress = ref<CustomerAddress | undefined>()
+
+// Height matching for cards
+const customerCardRef = ref<HTMLElement | null>(null)
+const addressesCardHeight = ref<number | null>(null)
+let resizeObserver: ResizeObserver | null = null
 
 function validate(): boolean {
   errors.value = {}
@@ -254,7 +259,21 @@ onMounted(() => {
   if (isEditMode.value) {
     loadOrders()
     loadAddresses()
+
+    // Setup ResizeObserver to match card heights
+    if (customerCardRef.value) {
+      resizeObserver = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+          addressesCardHeight.value = entry.target.getBoundingClientRect().height
+        }
+      })
+      resizeObserver.observe(customerCardRef.value)
+    }
   }
+})
+
+onUnmounted(() => {
+  resizeObserver?.disconnect()
 })
 </script>
 
@@ -263,10 +282,11 @@ onMounted(() => {
     <!-- Layout principal: Formulario + Direcciones en dos columnas -->
     <div class="main-layout" :class="{ 'two-columns': isEditMode }">
       <!-- Card Formulario -->
-      <Card>
-        <template #title>
-          {{ labels.customers.customerData }}
-        </template>
+      <div ref="customerCardRef">
+        <Card>
+          <template #title>
+            {{ labels.customers.customerData }}
+          </template>
         <template #content>
           <form @submit.prevent="save" class="form">
             <!-- Fila 1: Teléfono y Nombre -->
@@ -340,9 +360,14 @@ onMounted(() => {
           </form>
         </template>
       </Card>
+      </div>
 
       <!-- Card Direcciones (solo en modo edición) -->
-      <Card v-if="isEditMode" class="addresses-card">
+      <Card
+        v-if="isEditMode"
+        class="addresses-card"
+        :style="addressesCardHeight ? { height: addressesCardHeight + 'px' } : {}"
+      >
       <template #title>
         <div class="section-header">
           <span>{{ labels.address.title }}</span>
@@ -516,6 +541,24 @@ onMounted(() => {
   grid-template-columns: 1fr 1fr;
   gap: var(--spacing-lg);
   align-items: start;
+}
+
+.addresses-card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.addresses-card :deep(.p-card-body) {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.addresses-card :deep(.p-card-content) {
+  flex: 1;
+  overflow-y: auto;
 }
 
 @media (max-width: 1024px) {
