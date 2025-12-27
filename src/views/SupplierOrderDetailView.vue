@@ -115,26 +115,25 @@ onMounted(loadOrder)
       </template>
     </Card>
 
-    <!-- Supplier Info -->
+    <!-- Invoice Data -->
     <Card>
       <template #title>
-        {{ labels.fields.supplier }}
+        Datos de la factura
       </template>
       <template #content>
-        <div class="supplier-info">
-          <div class="info-row">
-            <span class="info-label">{{ labels.fields.name }}:</span>
+        <div class="invoice-info">
+          <div class="info-grid">
+            <span class="info-label">{{ labels.fields.supplier }}:</span>
             <span class="info-value">{{ order.supplier.name }}</span>
-          </div>
-          <div class="info-row">
+
             <span class="info-label">{{ labels.supplierOrders.subtotalProducts }}:</span>
             <span class="info-value">{{ formatCurrency(order.totalAmount, order.currency) }}</span>
-          </div>
-          <div v-if="order.shippingCost > 0" class="info-row">
-            <span class="info-label">{{ labels.supplierOrders.shipping }}:</span>
-            <span class="info-value">{{ formatCurrency(order.shippingCost, order.currency) }}</span>
-          </div>
-          <div class="info-row">
+
+            <template v-if="order.shippingCost > 0">
+              <span class="info-label">{{ labels.supplierOrders.shipping }}:</span>
+              <span class="info-value">{{ formatCurrency(order.shippingCost, order.currency) }}</span>
+            </template>
+
             <span class="info-label">{{ labels.supplierOrders.grandTotal }}:</span>
             <span class="info-value total">{{ formatCurrency(order.totalAmount + order.shippingCost, order.currency) }}</span>
           </div>
@@ -283,21 +282,22 @@ onMounted(loadOrder)
   font-size: 0.875rem;
 }
 
-.supplier-info {
+.invoice-info {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-sm);
 }
 
-.info-row {
-  display: flex;
-  gap: var(--spacing-sm);
+.info-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--spacing-sm) var(--spacing-lg);
+  align-items: baseline;
 }
 
 .info-label {
   font-weight: 500;
   color: var(--color-text-muted);
-  min-width: 120px;
+  white-space: nowrap;
 }
 
 .info-value {

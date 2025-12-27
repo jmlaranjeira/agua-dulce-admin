@@ -175,45 +175,6 @@ function generateWhatsAppMessage(): string {
   return msg
 }
 
-function generateWhatsAppMessageForLink(): string {
-  if (!order.value) return ''
-
-  let msg = `*Pedido ${order.value.number}*\n\n`
-  msg += `${labels.whatsapp.greetingPlain}\n\n`
-
-  for (const item of order.value.items) {
-    const subtotal = item.quantity * item.unitPrice
-    msg += `- ${item.product.name} x${item.quantity} - ${subtotal.toFixed(2)} EUR\n`
-  }
-
-  msg += `\n*${labels.fields.total}: ${total.value.toFixed(2)} EUR*\n\n`
-
-  if (order.value.shippingAddress) {
-    msg += `Envio a:\n`
-    msg += `${order.value.shippingAddress.street}\n`
-    msg += `${order.value.shippingAddress.postalCode} ${order.value.shippingAddress.city}\n`
-    if (order.value.shippingAddress.notes) {
-      msg += `(${order.value.shippingAddress.notes})\n`
-    }
-    msg += `\n`
-  }
-
-  const paymentInfo = buildPaymentInfo(false)
-  if (paymentInfo) msg += `${paymentInfo}\n\n`
-
-  msg += labels.whatsapp.thanksPlain
-
-  return msg
-}
-
-function openWhatsApp() {
-  if (!order.value) return
-  const message = generateWhatsAppMessageForLink()
-  const phone = order.value.customer.phone.replace(/[^0-9]/g, '')
-  const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
-  window.open(url, '_blank')
-}
-
 function copyToClipboard() {
   navigator.clipboard.writeText(generateWhatsAppMessage())
   toast.add({ severity: 'success', summary: labels.orders.copyMessage, detail: labels.orders.messageCopied, life: 2000 })
@@ -295,17 +256,10 @@ onMounted(loadOrder)
                 @click="generateOrderPdf(order!)"
               />
               <Button
-                icon="pi pi-copy"
-                severity="secondary"
-                outlined
-                v-tooltip.bottom="labels.orders.copyMessage"
-                @click="copyToClipboard"
-              />
-              <Button
                 icon="pi pi-whatsapp"
                 severity="success"
-                v-tooltip.bottom="labels.orders.sendWhatsApp"
-                @click="openWhatsApp"
+                v-tooltip.bottom="labels.orders.copyMessage"
+                @click="copyToClipboard"
               />
             </div>
 
@@ -340,10 +294,10 @@ onMounted(loadOrder)
               />
               <Button
                 icon="pi pi-whatsapp"
-                label="Enviar WhatsApp"
+                :label="labels.orders.copyMessage"
                 severity="success"
                 class="w-full"
-                @click="openWhatsApp"
+                @click="copyToClipboard"
               />
               <Button
                 icon="pi pi-file-pdf"
