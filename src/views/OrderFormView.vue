@@ -13,6 +13,7 @@ import Column from 'primevue/column'
 import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
 import Tag from 'primevue/tag'
+import Divider from 'primevue/divider'
 import IconField from 'primevue/iconfield'
 import InputIcon from 'primevue/inputicon'
 import ImageThumbnail from '@/components/ImageThumbnail.vue'
@@ -100,6 +101,10 @@ const {
   getMarginClass,
   getTotalMarginClass,
 } = useOrderMargin(orderItems)
+
+const totalQuantity = computed(() =>
+  orderItems.value.reduce((sum, item) => sum + item.quantity, 0)
+)
 
 const categoryOptions = computed(() => [
   { name: labels.products.allCategories, id: null },
@@ -352,77 +357,88 @@ onMounted(() => {
     <Card>
       <template #content>
         <div class="form">
-          <!-- Customer Selection -->
-          <div class="form-section">
-            <label>{{ labels.fields.customer }} *</label>
-            <div class="customer-row">
+          <!-- Fila 1: Cliente + Dirección -->
+          <div class="form-grid">
+            <div class="form-section">
+              <label>{{ labels.fields.customer }} *</label>
+              <div class="customer-row">
+                <Select
+                  v-model="selectedCustomer"
+                  :options="customerOptions"
+                  optionLabel="displayName"
+                  :placeholder="labels.orders.selectCustomer"
+                  filter
+                  class="customer-select"
+                  :disabled="loading"
+                />
+                <Button
+                  icon="pi pi-plus"
+                  severity="secondary"
+                  outlined
+                  v-tooltip.top="labels.customers.newCustomer"
+                  @click="showNewCustomerDialog = true"
+                />
+              </div>
+              <small v-if="isWholesaleCustomer" class="wholesale-hint">
+                <i class="pi pi-tag"></i>
+                Cliente mayorista - Se aplicarán precios de mayorista
+              </small>
+            </div>
+
+            <div class="form-section">
+              <label>{{ labels.address.shippingAddress }}</label>
               <Select
-                v-model="selectedCustomer"
-                :options="customerOptions"
-                optionLabel="displayName"
-                :placeholder="labels.orders.selectCustomer"
-                filter
-                class="customer-select"
-                :disabled="loading"
-              />
-              <Tag
-                v-if="isWholesaleCustomer"
-                :value="labels.customerType.wholesaleIndicator"
-                severity="warn"
-                class="wholesale-tag"
-              />
-              <Button
-                icon="pi pi-plus"
-                :label="labels.customers.newCustomer"
-                severity="secondary"
-                outlined
-                @click="showNewCustomerDialog = true"
-              />
+                v-if="selectedCustomer && customerAddresses.length > 0"
+                v-model="selectedShippingAddressId"
+                :options="customerAddresses"
+                optionLabel="label"
+                optionValue="id"
+                :placeholder="labels.address.selectAddress"
+                class="w-full"
+                showClear
+              >
+                <template #option="{ option }">
+                  <div class="address-option">
+                    <span class="address-option-label">
+                      {{ option.label }}
+                      <Tag v-if="option.isDefault" severity="success" value="Principal" size="small" />
+                    </span>
+                    <span class="address-option-detail">
+                      {{ option.street }}, {{ option.postalCode }} {{ option.city }}
+                    </span>
+                  </div>
+                </template>
+                <template #value="slotProps">
+                  <span v-if="slotProps.value">{{ getAddressLabel(slotProps.value) }}</span>
+                  <span v-else>{{ slotProps.placeholder }}</span>
+                </template>
+              </Select>
+              <div v-else class="no-address-placeholder">
+                <span class="text-muted">{{ selectedCustomer ? labels.address.noAddresses : labels.address.selectAddress }}</span>
+              </div>
             </div>
           </div>
 
-          <!-- Shipping Address Selection -->
-          <div v-if="selectedCustomer && customerAddresses.length > 0" class="form-section">
-            <label>{{ labels.address.shippingAddress }}</label>
-            <Select
-              v-model="selectedShippingAddressId"
-              :options="customerAddresses"
-              optionLabel="label"
-              optionValue="id"
-              :placeholder="labels.address.selectAddress"
-              class="w-full"
-              showClear
-            >
-              <template #option="{ option }">
-                <div class="address-option">
-                  <span class="address-option-label">
-                    {{ option.label }}
-                    <Tag v-if="option.isDefault" severity="success" value="Principal" size="small" />
-                  </span>
-                  <span class="address-option-detail">
-                    {{ option.street }}, {{ option.postalCode }} {{ option.city }}
-                  </span>
-                </div>
-              </template>
-              <template #value="slotProps">
-                <span v-if="slotProps.value">{{ getAddressLabel(slotProps.value) }}</span>
-                <span v-else>{{ slotProps.placeholder }}</span>
-              </template>
-            </Select>
-          </div>
+          <!-- Fila 2: Productos (ancho completo) -->
+          <div class="form-section products-section">
+            <div class="section-header">
+              <label>{{ labels.pages.products }}</label>
+              <Tag v-if="isWholesaleCustomer" severity="warn" class="wholesale-section-tag">
+                <i class="pi pi-info-circle"></i>
+                {{ labels.customerType.wholesaleIndicator }}
+              </Tag>
+            </div>
 
-          <!-- Product Search -->
-          <div class="form-section">
-            <label>{{ labels.pages.products }}</label>
-            <div class="product-row">
-              <div class="product-search-group">
+            <!-- Product Search Inline -->
+            <div class="product-search-inline">
+              <div class="search-field">
                 <AutoComplete
                   v-model="selectedProduct"
                   :suggestions="filteredProducts"
                   optionLabel="name"
                   :placeholder="labels.orders.selectProduct"
                   @complete="searchProducts"
-                  class="product-autocomplete"
+                  class="w-full"
                   :disabled="loading"
                 >
                   <template #option="{ option }">
@@ -436,34 +452,32 @@ onMounted(() => {
                     </div>
                   </template>
                 </AutoComplete>
-                <Button
-                  icon="pi pi-search"
-                  severity="secondary"
-                  outlined
-                  v-tooltip.top="'Buscar productos'"
-                  @click="showProductModal = true"
-                />
               </div>
-              <div class="product-add-group">
+              <div class="quantity-field">
                 <InputNumber
                   v-model="quantity"
                   :min="1"
                   :max="99"
                   showButtons
-                  class="quantity-input"
-                />
-                <Button
-                  icon="pi pi-plus"
-                  :label="labels.orders.addProduct"
-                  @click="addItem"
-                  :disabled="!selectedProduct"
+                  class="w-full"
                 />
               </div>
+              <Button
+                icon="pi pi-plus"
+                :label="labels.orders.addProduct"
+                @click="addItem"
+                :disabled="!selectedProduct"
+              />
+              <Button
+                icon="pi pi-search"
+                severity="secondary"
+                outlined
+                v-tooltip.top="'Buscar en catálogo'"
+                @click="showProductModal = true"
+              />
             </div>
-          </div>
 
-          <!-- Order Items Table -->
-          <div class="form-section">
+            <!-- Order Items Table -->
             <DataTable :value="orderItems" class="items-table">
               <template #empty>
                 <div class="empty-cart">
@@ -539,31 +553,48 @@ onMounted(() => {
                 </template>
               </Column>
             </DataTable>
+          </div>
 
-            <div class="total-row" v-if="orderItems.length > 0">
-              <div class="total-margin" v-if="totalMargin !== null">
-                <span class="total-margin-label">Margen:</span>
+          <!-- Fila 3: Notas + Resumen -->
+          <div class="form-grid notes-summary-row">
+            <div class="form-section notes-section">
+              <label for="notes">{{ labels.fields.notes }}</label>
+              <Textarea
+                id="notes"
+                v-model="notes"
+                rows="4"
+                autoResize
+                :disabled="loading"
+              />
+            </div>
+
+            <div class="summary-card">
+              <div class="summary-title">Resumen</div>
+
+              <div class="summary-row">
+                <span class="summary-label">Productos:</span>
+                <span>{{ orderItems.length }} items</span>
+              </div>
+
+              <div class="summary-row">
+                <span class="summary-label">Unidades:</span>
+                <span>{{ totalQuantity }}</span>
+              </div>
+
+              <div v-if="totalMargin !== null" class="summary-row">
+                <span class="summary-label">Margen:</span>
                 <span class="margin-badge" :class="getTotalMarginClass()">
                   {{ formatCurrency(totalMarginAmount!) }} ({{ totalMargin.toFixed(0) }}%)
                 </span>
               </div>
-              <div class="total-amount">
-                <span class="total-label">{{ labels.fields.total }}:</span>
-                <span class="total-value">{{ formatCurrency(total) }}</span>
+
+              <Divider />
+
+              <div class="summary-total">
+                <span>Total:</span>
+                <span class="summary-total-value">{{ formatCurrency(total) }}</span>
               </div>
             </div>
-          </div>
-
-          <!-- Notes -->
-          <div class="form-section">
-            <label for="notes">{{ labels.fields.notes }}</label>
-            <Textarea
-              id="notes"
-              v-model="notes"
-              rows="3"
-              autoResize
-              :disabled="loading"
-            />
           </div>
 
           <!-- Actions -->
@@ -741,6 +772,12 @@ onMounted(() => {
   gap: var(--spacing-xl);
 }
 
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-lg);
+}
+
 .form-section {
   display: flex;
   flex-direction: column;
@@ -762,41 +799,70 @@ onMounted(() => {
   flex: 1;
 }
 
-.product-row {
+.wholesale-hint {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--p-orange-600, #ea580c);
+  margin-top: 0.25rem;
+}
+
+.wholesale-hint i {
+  font-size: 0.75rem;
+}
+
+.no-address-placeholder {
+  padding: 0.75rem;
+  border: 1px dashed var(--surface-border, #e5e7eb);
+  border-radius: var(--border-radius);
+  text-align: center;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.section-header label {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.wholesale-section-tag {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.wholesale-section-tag i {
+  font-size: 0.75rem;
+}
+
+.product-search-inline {
   display: flex;
   gap: var(--spacing-sm);
-  align-items: center;
+  align-items: flex-end;
 }
 
-.product-search-group {
-  display: flex;
-  gap: var(--spacing-xs);
-  align-items: center;
+.search-field {
   flex: 1;
   min-width: 0;
 }
 
-.product-autocomplete {
-  flex: 1;
-  min-width: 0;
-}
-
-.product-autocomplete :deep(input) {
+.search-field :deep(.p-autocomplete) {
   width: 100%;
 }
 
-.product-add-group {
-  display: flex;
-  gap: var(--spacing-sm);
-  align-items: center;
-  flex-shrink: 0;
+.search-field :deep(input) {
+  width: 100%;
 }
 
-.quantity-input {
+.quantity-field {
   width: 90px;
 }
 
-.quantity-input :deep(input) {
+.quantity-field :deep(input) {
   width: 100%;
 }
 
@@ -918,42 +984,50 @@ onMounted(() => {
   color: var(--color-text-muted);
 }
 
-.total-row {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  gap: var(--spacing-xl);
-  padding: var(--spacing-md);
+/* Notes + Summary Row */
+.notes-summary-row {
+  grid-template-columns: 7fr 5fr;
+}
+
+.notes-section {
+  min-height: 150px;
+}
+
+.summary-card {
+  padding: 1rem;
   background-color: #f8fafc;
   border-radius: var(--border-radius);
-  margin-top: var(--spacing-sm);
+  border: 1px solid var(--surface-border, #e5e7eb);
 }
 
-.total-margin {
+.summary-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: var(--color-text);
+}
+
+.summary-row {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: var(--spacing-sm);
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
 }
 
-.total-margin-label {
-  font-weight: 500;
+.summary-label {
   color: var(--color-text-muted);
 }
 
-.total-amount {
+.summary-total {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: var(--spacing-md);
-}
-
-.total-label {
-  font-weight: 600;
-  font-size: 1.1em;
-}
-
-.total-value {
+  font-size: 1.25rem;
   font-weight: 700;
-  font-size: 1.25em;
+}
+
+.summary-total-value {
   color: var(--color-primary);
 }
 
@@ -1041,6 +1115,16 @@ onMounted(() => {
   color: var(--color-text-muted);
 }
 
+@media (max-width: 1024px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .notes-summary-row {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 768px) {
   .customer-row {
     flex-direction: column;
@@ -1051,24 +1135,21 @@ onMounted(() => {
     width: 100%;
   }
 
-  .product-row {
+  .product-search-inline {
     flex-wrap: wrap;
   }
 
-  .product-search-group {
+  .search-field {
     flex: 1 1 100%;
+    margin-bottom: var(--spacing-sm);
   }
 
-  .product-add-group {
-    flex: 1 1 100%;
-  }
-
-  .product-add-group .quantity-input {
+  .quantity-field {
     flex: 1;
     width: auto;
   }
 
-  .product-add-group button {
+  .product-search-inline button {
     flex: 1;
   }
 
@@ -1078,6 +1159,10 @@ onMounted(() => {
 
   .modal-category-filter {
     width: 100%;
+  }
+
+  .summary-card {
+    order: -1;
   }
 }
 </style>
