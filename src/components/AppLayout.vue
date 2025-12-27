@@ -11,15 +11,25 @@ const router = useRouter()
 const authStore = useAuthStore()
 const sidebarVisible = ref(false)
 
-const menuItems = [
+type MenuItem = {
+  label: string
+  icon?: string
+  route?: string
+  isSection?: boolean
+}
+
+const menuItems: MenuItem[] = [
   { label: labels.menu.dashboard, icon: 'pi pi-home', route: '/' },
-  { label: labels.menu.suppliers, icon: 'pi pi-truck', route: '/suppliers' },
-  { label: labels.menu.products, icon: 'pi pi-box', route: '/products' },
-  { label: labels.menu.stockMovements, icon: 'pi pi-history', route: '/stock/movements' },
-  { label: labels.menu.import, icon: 'pi pi-cloud-download', route: '/import' },
-  { label: labels.menu.supplierOrders, icon: 'pi pi-file', route: '/supplier-orders' },
-  { label: labels.menu.customers, icon: 'pi pi-users', route: '/customers' },
+  { label: labels.menu.sectionSales, isSection: true },
   { label: labels.menu.orders, icon: 'pi pi-shopping-cart', route: '/orders' },
+  { label: labels.menu.customers, icon: 'pi pi-users', route: '/customers' },
+  { label: labels.menu.sectionCatalog, isSection: true },
+  { label: labels.menu.products, icon: 'pi pi-box', route: '/products' },
+  { label: labels.menu.stock, icon: 'pi pi-chart-bar', route: '/stock/movements' },
+  { label: labels.menu.sectionPurchases, isSection: true },
+  { label: labels.menu.suppliers, icon: 'pi pi-truck', route: '/suppliers' },
+  { label: labels.menu.invoices, icon: 'pi pi-file', route: '/supplier-orders' },
+  { label: labels.menu.import, icon: 'pi pi-cloud-download', route: '/import' },
 ]
 
 const pageTitleMap: Record<string, string> = {
@@ -72,16 +82,20 @@ function handleLogout() {
         <span class="sidebar-logo">{{ labels.app.name }}</span>
       </div>
       <nav class="sidebar-nav">
-        <button
-          v-for="item in menuItems"
-          :key="item.route"
-          class="nav-item"
-          :class="{ active: isActive(item.route) }"
-          @click="navigateTo(item.route)"
-        >
-          <i :class="item.icon"></i>
-          <span>{{ item.label }}</span>
-        </button>
+        <template v-for="item in menuItems" :key="item.label">
+          <div v-if="item.isSection" class="menu-section">
+            {{ item.label }}
+          </div>
+          <button
+            v-else
+            class="nav-item"
+            :class="{ active: isActive(item.route!) }"
+            @click="navigateTo(item.route!)"
+          >
+            <i :class="item.icon"></i>
+            <span>{{ item.label }}</span>
+          </button>
+        </template>
       </nav>
     </aside>
 
@@ -91,16 +105,20 @@ function handleLogout() {
         <span class="sidebar-logo">{{ labels.app.name }}</span>
       </template>
       <nav class="sidebar-nav">
-        <button
-          v-for="item in menuItems"
-          :key="item.route"
-          class="nav-item"
-          :class="{ active: isActive(item.route) }"
-          @click="navigateTo(item.route)"
-        >
-          <i :class="item.icon"></i>
-          <span>{{ item.label }}</span>
-        </button>
+        <template v-for="item in menuItems" :key="item.label">
+          <div v-if="item.isSection" class="menu-section">
+            {{ item.label }}
+          </div>
+          <button
+            v-else
+            class="nav-item"
+            :class="{ active: isActive(item.route!) }"
+            @click="navigateTo(item.route!)"
+          >
+            <i :class="item.icon"></i>
+            <span>{{ item.label }}</span>
+          </button>
+        </template>
       </nav>
     </Sidebar>
 

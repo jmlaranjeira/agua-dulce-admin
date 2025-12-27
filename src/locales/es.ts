@@ -21,11 +21,15 @@ export const labels = {
     dashboard: 'Dashboard',
     suppliers: 'Proveedores',
     products: 'Productos',
-    stockMovements: 'Movimientos Stock',
+    stock: 'Stock',
     import: 'Importar',
-    supplierOrders: 'Facturas Proveedor',
+    invoices: 'Facturas',
     customers: 'Clientes',
     orders: 'Pedidos',
+    // Secciones
+    sectionSales: 'VENTAS',
+    sectionCatalog: 'CATÁLOGO',
+    sectionPurchases: 'COMPRAS',
   },
   pages: {
     dashboard: 'Dashboard',
