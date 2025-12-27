@@ -65,6 +65,12 @@ export const labels = {
     DELIVERED: 'Entregado',
     CANCELLED: 'Cancelado',
   },
+  customerType: {
+    CLIENTE: 'Cliente',
+    PROVEEDOR: 'Proveedor',
+    label: 'Tipo de cliente',
+    wholesaleIndicator: 'Precio mayorista',
+  },
   messages: {
     confirmDelete: '¿Estás seguro de que quieres eliminar este elemento?',
     savedSuccess: 'Guardado correctamente',
@@ -184,6 +190,7 @@ export const labels = {
     supplier: 'Proveedor',
     category: 'Categoría',
     customer: 'Cliente',
+    type: 'Tipo',
     status: 'Estado',
     date: 'Fecha',
     quantity: 'Cantidad',

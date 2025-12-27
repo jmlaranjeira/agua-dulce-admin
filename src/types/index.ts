@@ -30,6 +30,7 @@ export interface RegisterRequest {
 // ===========================================
 export type OrderStatus = 'PENDING' | 'PAID' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED'
 export type StockMovementType = 'PURCHASE' | 'SALE' | 'ADJUSTMENT' | 'RETURN'
+export type CustomerType = 'CLIENTE' | 'PROVEEDOR'
 
 // ===========================================
 // Response types (lo que devuelve la API)
@@ -85,6 +86,7 @@ export type Customer = {
   id: string
   phone: string
   name: string
+  type: CustomerType
   notes: string | null
   addresses?: CustomerAddress[]
   createdAt: string
@@ -158,6 +160,7 @@ export type CreateProduct = {
 export type CreateCustomer = {
   phone: string
   name: string
+  type?: CustomerType
   notes?: string
 }
 

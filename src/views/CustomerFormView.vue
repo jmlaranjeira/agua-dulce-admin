@@ -7,6 +7,7 @@ import Card from 'primevue/card'
 import InputText from 'primevue/inputtext'
 import Textarea from 'primevue/textarea'
 import Button from 'primevue/button'
+import Select from 'primevue/select'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Tag from 'primevue/tag'
@@ -14,7 +15,7 @@ import ConfirmDialog from 'primevue/confirmdialog'
 import AddressDialog from '@/components/AddressDialog.vue'
 import { api } from '@/services/api'
 import { labels } from '@/locales/es'
-import type { CreateCustomer, UpdateCustomer, Order, CustomerAddress } from '@/types'
+import type { CreateCustomer, UpdateCustomer, Order, CustomerAddress, CustomerType } from '@/types'
 
 const route = useRoute()
 const router = useRouter()
@@ -24,9 +25,15 @@ const confirm = useConfirm()
 const customerId = computed(() => route.params.id as string | undefined)
 const isEditMode = computed(() => !!customerId.value)
 
+const customerTypeOptions: { value: CustomerType; label: string }[] = [
+  { value: 'CLIENTE', label: labels.customerType.CLIENTE },
+  { value: 'PROVEEDOR', label: labels.customerType.PROVEEDOR },
+]
+
 const form = ref<CreateCustomer>({
   phone: '',
   name: '',
+  type: 'CLIENTE',
   notes: '',
 })
 
@@ -63,6 +70,7 @@ async function loadCustomer() {
     form.value = {
       phone: customer.phone,
       name: customer.name,
+      type: customer.type,
       notes: customer.notes || '',
     }
   } catch (err) {
@@ -172,6 +180,7 @@ async function save() {
     const data: CreateCustomer | UpdateCustomer = {
       phone: form.value.phone.trim(),
       name: form.value.name.trim(),
+      type: form.value.type,
       notes: form.value.notes?.trim() || undefined,
     }
 
@@ -272,6 +281,18 @@ onMounted(() => {
               :disabled="loading"
             />
             <small v-if="errors.name" class="p-error">{{ errors.name }}</small>
+          </div>
+
+          <div class="form-field">
+            <label for="type">{{ labels.customerType.label }}</label>
+            <Select
+              id="type"
+              v-model="form.type"
+              :options="customerTypeOptions"
+              optionLabel="label"
+              optionValue="value"
+              :disabled="loading"
+            />
           </div>
 
           <div class="form-field">

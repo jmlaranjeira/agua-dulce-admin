@@ -9,9 +9,10 @@ import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import IconField from 'primevue/iconfield'
 import InputIcon from 'primevue/inputicon'
+import Tag from 'primevue/tag'
 import { api } from '@/services/api'
 import { labels } from '@/locales/es'
-import type { Customer } from '@/types'
+import type { Customer, CustomerType } from '@/types'
 
 const router = useRouter()
 const toast = useToast()
@@ -51,6 +52,10 @@ function truncateNotes(notes: string | null, maxLength = 50): string {
   return notes.length > maxLength ? notes.substring(0, maxLength) + '...' : notes
 }
 
+function getTypeSeverity(type: CustomerType): 'info' | 'warn' {
+  return type === 'PROVEEDOR' ? 'warn' : 'info'
+}
+
 onMounted(loadCustomers)
 </script>
 
@@ -77,7 +82,7 @@ onMounted(loadCustomers)
           v-model:filters="filters"
           :value="customers"
           :loading="loading"
-          :globalFilterFields="['name', 'phone']"
+          :globalFilterFields="['name', 'phone', 'type']"
           paginator
           :rows="10"
           :rowsPerPageOptions="[10, 25, 50]"
@@ -96,6 +101,15 @@ onMounted(loadCustomers)
           <Column field="name" :header="labels.fields.name" sortable />
 
           <Column field="phone" :header="labels.fields.phone" />
+
+          <Column field="type" :header="labels.fields.type" style="width: 120px">
+            <template #body="{ data }">
+              <Tag
+                :value="labels.customerType[data.type as keyof typeof labels.customerType]"
+                :severity="getTypeSeverity(data.type)"
+              />
+            </template>
+          </Column>
 
           <Column field="notes" :header="labels.fields.notes">
             <template #body="{ data }">

@@ -19,7 +19,7 @@ import ImageThumbnail from '@/components/ImageThumbnail.vue'
 import { api } from '@/services/api'
 import { labels } from '@/locales/es'
 import { useOrderMargin } from '@/composables/useOrderMargin'
-import type { Customer, Product, CreateOrder, CreateCustomer, CustomerAddress, Category } from '@/types'
+import type { Customer, Product, CreateOrder, CreateCustomer, CustomerAddress, Category, CustomerType } from '@/types'
 
 type OrderItemForm = {
   product: Product
@@ -50,6 +50,7 @@ const showNewCustomerDialog = ref(false)
 const newCustomerForm = ref<CreateCustomer>({
   phone: '',
   name: '',
+  type: 'CLIENTE',
   notes: '',
 })
 const savingCustomer = ref(false)
@@ -71,6 +72,24 @@ const customerOptions = computed(() =>
     displayName: `${c.name} (${c.phone})`,
   }))
 )
+
+const isWholesaleCustomer = computed(() => selectedCustomer.value?.type === 'PROVEEDOR')
+
+const customerTypeOptions: { value: CustomerType; label: string }[] = [
+  { value: 'CLIENTE', label: labels.customerType.CLIENTE },
+  { value: 'PROVEEDOR', label: labels.customerType.PROVEEDOR },
+]
+
+function getEffectivePrice(product: Product): number {
+  if (isWholesaleCustomer.value && product.priceWholesale) {
+    return product.priceWholesale
+  }
+  return product.priceRetail
+}
+
+function hasWholesalePrice(product: Product): boolean {
+  return isWholesaleCustomer.value && product.priceWholesale !== null
+}
 
 // Order calculations from composable
 const {
@@ -130,8 +149,8 @@ async function loadCategories() {
   }
 }
 
-// Watch customer changes to load addresses
-watch(selectedCustomer, async (newCustomer) => {
+// Watch customer changes to load addresses and recalculate prices
+watch(selectedCustomer, async (newCustomer, oldCustomer) => {
   selectedShippingAddressId.value = null
   customerAddresses.value = []
 
@@ -146,6 +165,13 @@ watch(selectedCustomer, async (newCustomer) => {
     } catch (err) {
       console.error('Error loading addresses:', err)
     }
+  }
+
+  // Recalculate prices if customer type changed
+  if (newCustomer?.type !== oldCustomer?.type) {
+    orderItems.value.forEach((item) => {
+      item.unitPrice = getEffectivePrice(item.product)
+    })
   }
 })
 
@@ -176,7 +202,7 @@ function addItem() {
     orderItems.value.push({
       product,
       quantity: quantity.value,
-      unitPrice: product.priceRetail,
+      unitPrice: getEffectivePrice(product),
     })
   }
 
@@ -193,7 +219,7 @@ function addProductFromModal(product: Product) {
     orderItems.value.push({
       product,
       quantity: 1,
-      unitPrice: product.priceRetail,
+      unitPrice: getEffectivePrice(product),
     })
   }
 
@@ -232,12 +258,13 @@ async function saveNewCustomer() {
     const customer = await api.customers.create({
       phone: newCustomerForm.value.phone.trim(),
       name: newCustomerForm.value.name.trim(),
+      type: newCustomerForm.value.type,
       notes: newCustomerForm.value.notes?.trim() || undefined,
     })
     customers.value.push(customer)
     selectedCustomer.value = customer
     showNewCustomerDialog.value = false
-    newCustomerForm.value = { phone: '', name: '', notes: '' }
+    newCustomerForm.value = { phone: '', name: '', type: 'CLIENTE', notes: '' }
     toast.add({
       severity: 'success',
       summary: 'OK',
@@ -338,6 +365,12 @@ onMounted(() => {
                 class="customer-select"
                 :disabled="loading"
               />
+              <Tag
+                v-if="isWholesaleCustomer"
+                :value="labels.customerType.wholesaleIndicator"
+                severity="warn"
+                class="wholesale-tag"
+              />
               <Button
                 icon="pi pi-plus"
                 :label="labels.customers.newCustomer"
@@ -396,7 +429,10 @@ onMounted(() => {
                     <div class="product-option">
                       <span class="product-code">{{ option.code }}</span>
                       <span class="product-name">{{ option.name }}</span>
-                      <span class="product-price">{{ formatCurrency(option.priceRetail) }}</span>
+                      <span class="product-price">
+                        {{ formatCurrency(getEffectivePrice(option)) }}
+                        <i v-if="hasWholesalePrice(option)" class="pi pi-tag wholesale-icon-small" />
+                      </span>
                     </div>
                   </template>
                 </AutoComplete>
@@ -450,9 +486,16 @@ onMounted(() => {
                 </template>
               </Column>
 
-              <Column field="unitPrice" :header="labels.fields.price" style="width: 100px">
+              <Column field="unitPrice" :header="labels.fields.price" style="width: 120px">
                 <template #body="{ data }">
-                  {{ formatCurrency(data.unitPrice) }}
+                  <div class="price-cell">
+                    {{ formatCurrency(data.unitPrice) }}
+                    <i
+                      v-if="hasWholesalePrice(data.product)"
+                      class="pi pi-tag wholesale-icon"
+                      v-tooltip.top="labels.customerType.wholesaleIndicator"
+                    />
+                  </div>
                 </template>
               </Column>
 
@@ -573,6 +616,17 @@ onMounted(() => {
         </div>
 
         <div class="form-field">
+          <label for="newType">{{ labels.customerType.label }}</label>
+          <Select
+            id="newType"
+            v-model="newCustomerForm.type"
+            :options="customerTypeOptions"
+            optionLabel="label"
+            optionValue="value"
+          />
+        </div>
+
+        <div class="form-field">
           <label for="newNotes">{{ labels.fields.notes }}</label>
           <Textarea
             id="newNotes"
@@ -648,9 +702,16 @@ onMounted(() => {
 
         <Column field="name" header="Nombre" />
 
-        <Column field="priceRetail" header="Precio" style="width: 100px">
+        <Column header="Precio" style="width: 120px">
           <template #body="{ data }">
-            {{ formatCurrency(data.priceRetail) }}
+            <div class="modal-price-cell">
+              <span :class="{ 'price-strikethrough': hasWholesalePrice(data) }">
+                {{ formatCurrency(data.priceRetail) }}
+              </span>
+              <span v-if="hasWholesalePrice(data)" class="wholesale-price">
+                {{ formatCurrency(data.priceWholesale!) }}
+              </span>
+            </div>
           </template>
         </Column>
 
@@ -759,6 +820,46 @@ onMounted(() => {
 .product-price {
   font-weight: 500;
   color: var(--color-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.wholesale-tag {
+  flex-shrink: 0;
+}
+
+.price-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.wholesale-icon {
+  color: var(--p-yellow-600, #ca8a04);
+  font-size: 0.75rem;
+}
+
+.wholesale-icon-small {
+  color: var(--p-yellow-600, #ca8a04);
+  font-size: 0.65rem;
+}
+
+.modal-price-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.price-strikethrough {
+  text-decoration: line-through;
+  color: var(--color-text-muted);
+  font-size: 0.85em;
+}
+
+.wholesale-price {
+  color: var(--p-yellow-600, #ca8a04);
+  font-weight: 600;
 }
 
 .items-table {
