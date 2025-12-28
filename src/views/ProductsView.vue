@@ -409,6 +409,11 @@ function getCategoryColor(categoryId: string): CategoryColor {
   return CATEGORY_COLORS[category.slug] ?? DEFAULT_CATEGORY_COLOR
 }
 
+function truncateText(text: string, maxLength: number = 22): string {
+  if (text.length <= maxLength) return text
+  return text.slice(0, maxLength) + '...'
+}
+
 onMounted(loadData)
 </script>
 
@@ -620,7 +625,7 @@ onMounted(loadData)
           <div class="mobile-card-main">
             <ImageThumbnail :src="product.imageUrl" :size="60" :preview-size="200" />
             <div class="mobile-card-info">
-              <div class="mobile-card-title">{{ product.name }}</div>
+              <div class="mobile-card-title" :title="product.name">{{ truncateText(product.name) }}</div>
               <div class="mobile-card-code">{{ product.code }}</div>
               <div class="mobile-card-price">{{ formatPrice(product.priceRetail) }}</div>
             </div>
@@ -892,6 +897,7 @@ onMounted(loadData)
 .mobile-card-info {
   flex: 1;
   min-width: 0;
+  overflow: hidden;
 }
 
 .mobile-card-title {
@@ -901,6 +907,7 @@ onMounted(loadData)
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .mobile-card-code {
@@ -919,6 +926,7 @@ onMounted(loadData)
   display: flex;
   flex-direction: column;
   align-items: flex-end;
+  flex-shrink: 0;
 }
 
 .mobile-card-inactive {
