@@ -61,6 +61,10 @@ export const labels = {
     search: 'Buscar',
     filter: 'Filtrar',
     clear: 'Limpiar',
+    actions: 'Acciones',
+    activate: 'Activar',
+    changeCategory: 'Cambiar categoría',
+    changeSupplier: 'Cambiar proveedor',
   },
   status: {
     PENDING: 'Pendiente',
@@ -143,7 +147,13 @@ export const labels = {
     noSupplier: 'Sin proveedor',
     noCategory: 'Sin categoría',
     selectCategory: 'Seleccionar categoría',
+    selectSupplier: 'Seleccionar proveedor',
     imageUrl: 'URL de imagen',
+    // Bulk actions
+    activatedSuccess: 'Productos activados correctamente',
+    bulkDeactivatedSuccess: 'Productos desactivados correctamente',
+    categoryChangedSuccess: 'Categoría actualizada correctamente',
+    supplierChangedSuccess: 'Proveedor actualizado correctamente',
   },
   orders: {
     newOrder: 'Nuevo pedido',

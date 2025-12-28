@@ -13,6 +13,7 @@ import InputIcon from 'primevue/inputicon'
 import Select from 'primevue/select'
 import Tag from 'primevue/tag'
 import Menu from 'primevue/menu'
+import Dialog from 'primevue/dialog'
 import ImageThumbnail from '@/components/ImageThumbnail.vue'
 import { api } from '@/services/api'
 import { labels } from '@/locales/es'
@@ -32,6 +33,11 @@ const loading = ref(true)
 const searchQuery = ref('')
 const mobileMenu = ref()
 const selectedProduct = ref<Product | null>(null)
+const bulkActionsMenu = ref()
+const showCategoryDialog = ref(false)
+const showSupplierDialog = ref(false)
+const selectedCategoryId = ref<string | null>(null)
+const selectedSupplierId = ref<string | null>(null)
 
 const statusFilter = ref<boolean | null>(null)
 const supplierFilter = ref<string | null>(null)
@@ -80,6 +86,30 @@ const mobileMenuItems = computed(() => [
     icon: 'pi pi-trash',
     class: 'text-red-500',
     command: () => selectedProduct.value && confirmDeleteProduct(selectedProduct.value),
+  },
+])
+
+const bulkActionsMenuItems = computed(() => [
+  {
+    label: labels.actions.activate,
+    icon: 'pi pi-check',
+    command: confirmBulkActivate,
+  },
+  {
+    label: labels.actions.deactivate,
+    icon: 'pi pi-times',
+    command: confirmBulkDeactivate,
+  },
+  { separator: true },
+  {
+    label: labels.actions.changeCategory,
+    icon: 'pi pi-tag',
+    command: () => (showCategoryDialog.value = true),
+  },
+  {
+    label: labels.actions.changeSupplier,
+    icon: 'pi pi-truck',
+    command: () => (showSupplierDialog.value = true),
   },
 ])
 
@@ -224,6 +254,132 @@ async function bulkDelete() {
   }
 }
 
+function confirmBulkActivate() {
+  confirm.require({
+    message: `¿Activar ${selectedProducts.value.length} productos?`,
+    header: labels.actions.activate,
+    icon: 'pi pi-check',
+    acceptLabel: labels.actions.activate,
+    rejectLabel: labels.actions.cancel,
+    accept: bulkActivate,
+  })
+}
+
+async function bulkActivate() {
+  try {
+    await Promise.all(
+      selectedProducts.value.map((p) => api.products.update(p.id, { isActive: true }))
+    )
+    selectedProducts.value.forEach((p) => (p.isActive = true))
+    selectedProducts.value = []
+    toast.add({
+      severity: 'success',
+      summary: 'OK',
+      detail: labels.products.activatedSuccess,
+      life: 3000,
+    })
+  } catch (err) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: err instanceof Error ? err.message : labels.messages.errorGeneric,
+      life: 3000,
+    })
+  }
+}
+
+function confirmBulkDeactivate() {
+  confirm.require({
+    message: `¿Desactivar ${selectedProducts.value.length} productos?`,
+    header: labels.actions.deactivate,
+    icon: 'pi pi-times',
+    acceptLabel: labels.actions.deactivate,
+    rejectLabel: labels.actions.cancel,
+    accept: bulkDeactivate,
+  })
+}
+
+async function bulkDeactivate() {
+  try {
+    await Promise.all(
+      selectedProducts.value.map((p) => api.products.update(p.id, { isActive: false }))
+    )
+    selectedProducts.value.forEach((p) => (p.isActive = false))
+    selectedProducts.value = []
+    toast.add({
+      severity: 'success',
+      summary: 'OK',
+      detail: labels.products.bulkDeactivatedSuccess,
+      life: 3000,
+    })
+  } catch (err) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: err instanceof Error ? err.message : labels.messages.errorGeneric,
+      life: 3000,
+    })
+  }
+}
+
+async function bulkChangeCategory() {
+  if (!selectedCategoryId.value) return
+  try {
+    await Promise.all(
+      selectedProducts.value.map((p) =>
+        api.products.update(p.id, { categoryId: selectedCategoryId.value! })
+      )
+    )
+    const newCategory = categories.value.find((c) => c.id === selectedCategoryId.value)
+    selectedProducts.value.forEach((p) => (p.category = newCategory))
+    selectedProducts.value = []
+    showCategoryDialog.value = false
+    selectedCategoryId.value = null
+    toast.add({
+      severity: 'success',
+      summary: 'OK',
+      detail: labels.products.categoryChangedSuccess,
+      life: 3000,
+    })
+  } catch (err) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: err instanceof Error ? err.message : labels.messages.errorGeneric,
+      life: 3000,
+    })
+  }
+}
+
+async function bulkChangeSupplier() {
+  if (!selectedSupplierId.value) return
+  try {
+    await Promise.all(
+      selectedProducts.value.map((p) =>
+        api.products.update(p.id, { supplierId: selectedSupplierId.value! })
+      )
+    )
+    const newSupplier = suppliers.value.find((s) => s.id === selectedSupplierId.value)
+    selectedProducts.value.forEach((p) => (p.supplier = newSupplier))
+    selectedProducts.value = []
+    showSupplierDialog.value = false
+    selectedSupplierId.value = null
+    toast.add({
+      severity: 'success',
+      summary: 'OK',
+      detail: labels.products.supplierChangedSuccess,
+      life: 3000,
+    })
+  } catch (err) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: err instanceof Error ? err.message : labels.messages.errorGeneric,
+      life: 3000,
+    })
+  }
+}
+
 function formatPrice(price: number): string {
   return new Intl.NumberFormat('es-ES', {
     style: 'currency',
@@ -298,14 +454,28 @@ onMounted(loadData)
     </div>
 
     <div v-if="selectedProducts.length > 0" class="bulk-actions">
-      <span class="bulk-count">{{ selectedProducts.length }} seleccionados</span>
-      <Button
-        :label="labels.actions.delete"
-        icon="pi pi-trash"
-        severity="danger"
-        size="small"
-        @click="confirmBulkDelete"
-      />
+      <span class="bulk-count">
+        <i class="pi pi-check-square"></i>
+        {{ selectedProducts.length }} seleccionados
+      </span>
+      <div class="bulk-buttons">
+        <Button
+          :label="labels.actions.actions"
+          icon="pi pi-chevron-down"
+          iconPos="right"
+          outlined
+          size="small"
+          @click="(e) => bulkActionsMenu.toggle(e)"
+        />
+        <Menu ref="bulkActionsMenu" :model="bulkActionsMenuItems" popup />
+        <Button
+          :label="labels.actions.delete"
+          icon="pi pi-trash"
+          severity="danger"
+          size="small"
+          @click="confirmBulkDelete"
+        />
+      </div>
     </div>
 
     <!-- Desktop: Tabla -->
@@ -468,6 +638,62 @@ onMounted(loadData)
 
     <!-- Menú contextual móvil -->
     <Menu ref="mobileMenu" :model="mobileMenuItems" popup />
+
+    <!-- Dialog Cambiar Categoría -->
+    <Dialog
+      v-model:visible="showCategoryDialog"
+      modal
+      :header="labels.actions.changeCategory"
+      :style="{ width: '400px' }"
+    >
+      <div class="dialog-field">
+        <label>{{ labels.products.selectCategory }}</label>
+        <Select
+          v-model="selectedCategoryId"
+          :options="categories"
+          optionLabel="name"
+          optionValue="id"
+          :placeholder="labels.products.selectCategory"
+          class="w-full"
+        />
+      </div>
+      <template #footer>
+        <Button :label="labels.actions.cancel" text @click="showCategoryDialog = false" />
+        <Button
+          :label="labels.actions.save"
+          :disabled="!selectedCategoryId"
+          @click="bulkChangeCategory"
+        />
+      </template>
+    </Dialog>
+
+    <!-- Dialog Cambiar Proveedor -->
+    <Dialog
+      v-model:visible="showSupplierDialog"
+      modal
+      :header="labels.actions.changeSupplier"
+      :style="{ width: '400px' }"
+    >
+      <div class="dialog-field">
+        <label>{{ labels.products.selectSupplier }}</label>
+        <Select
+          v-model="selectedSupplierId"
+          :options="suppliers"
+          optionLabel="name"
+          optionValue="id"
+          :placeholder="labels.products.selectSupplier"
+          class="w-full"
+        />
+      </div>
+      <template #footer>
+        <Button :label="labels.actions.cancel" text @click="showSupplierDialog = false" />
+        <Button
+          :label="labels.actions.save"
+          :disabled="!selectedSupplierId"
+          @click="bulkChangeSupplier"
+        />
+      </template>
+    </Dialog>
   </div>
 </template>
 
@@ -583,15 +809,36 @@ onMounted(loadData)
 .bulk-actions {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: var(--spacing-md);
   padding: var(--spacing-sm) var(--spacing-md);
-  background: var(--p-red-50);
+  background: var(--p-primary-50);
   border-radius: var(--border-radius);
+  border: 1px solid var(--p-primary-200);
 }
 
 .bulk-count {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
   font-weight: 500;
-  color: var(--p-red-700);
+  color: var(--p-primary-700);
+}
+
+.bulk-buttons {
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+.dialog-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.dialog-field label {
+  font-weight: 500;
+  color: var(--color-text);
 }
 
 /* Hide columns on tablet */
