@@ -33,6 +33,24 @@ export type StockMovementType = 'PURCHASE' | 'SALE' | 'ADJUSTMENT' | 'RETURN'
 export type CustomerType = 'RETAIL' | 'WHOLESALE'
 
 // ===========================================
+// Category colors
+// ===========================================
+export type CategoryColor = { bg: string; text: string }
+
+export const CATEGORY_COLORS: Record<string, CategoryColor> = {
+  anillos: { bg: '#dbeafe', text: '#1e40af' }, // blue
+  pulseras: { bg: '#f3e8ff', text: '#6b21a8' }, // purple
+  colgantes: { bg: '#ccfbf1', text: '#0f766e' }, // teal
+  pendientes: { bg: '#fce7f3', text: '#9d174d' }, // pink
+  collares: { bg: '#e0e7ff', text: '#3730a3' }, // indigo
+  bolsos: { bg: '#cffafe', text: '#0e7490' }, // cyan
+  panuelos: { bg: '#fae8ff', text: '#86198f' }, // fuchsia
+  otros: { bg: '#f1f5f9', text: '#475569' }, // gray
+}
+
+export const DEFAULT_CATEGORY_COLOR: CategoryColor = { bg: '#f1f5f9', text: '#475569' } // gray
+
+// ===========================================
 // Response types (lo que devuelve la API)
 // ===========================================
 export type Supplier = {

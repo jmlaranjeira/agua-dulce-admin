@@ -18,7 +18,8 @@ import ImageThumbnail from '@/components/ImageThumbnail.vue'
 import { api } from '@/services/api'
 import { labels } from '@/locales/es'
 import { useBreakpoints } from '@/composables/useBreakpoints'
-import type { Product, Supplier, Category } from '@/types'
+import type { Product, Supplier, Category, CategoryColor } from '@/types'
+import { CATEGORY_COLORS, DEFAULT_CATEGORY_COLOR } from '@/types'
 
 const router = useRouter()
 const toast = useToast()
@@ -402,6 +403,12 @@ function getStockSeverity(stock: number): 'danger' | 'warn' | 'success' {
   return 'success'
 }
 
+function getCategoryColor(categoryId: string): CategoryColor {
+  const category = categories.value.find((c) => c.id === categoryId)
+  if (!category) return DEFAULT_CATEGORY_COLOR
+  return CATEGORY_COLORS[category.slug] ?? DEFAULT_CATEGORY_COLOR
+}
+
 onMounted(loadData)
 </script>
 
@@ -522,7 +529,14 @@ onMounted(loadData)
 
           <Column field="category" :header="labels.fields.category" style="width: 130px" class="hidden-tablet">
             <template #body="{ data }">
-              <Tag v-if="data.category" :value="data.category.name" severity="secondary" />
+              <Tag
+                v-if="data.category"
+                :value="data.category.name"
+                :style="{
+                  backgroundColor: getCategoryColor(data.category.id).bg,
+                  color: getCategoryColor(data.category.id).text,
+                }"
+              />
               <span v-else class="text-muted">-</span>
             </template>
           </Column>
