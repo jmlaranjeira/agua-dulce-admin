@@ -27,6 +27,7 @@ import type {
   Category,
   InvoicePreviewItem,
   PanbubuPreviewItem,
+  ExcelPreviewItem,
 } from '@/types'
 
 const router = useRouter()
@@ -100,6 +101,17 @@ const emailInfo = ref<{
   total: 0,
 })
 
+// Excel parsing state (for excel-supplier)
+const parsingExcel = ref(false)
+const excelFile = ref<File | null>(null)
+const excelInfo = ref<{
+  shippingCost: number
+  totalAmount: number
+}>({
+  shippingCost: 0,
+  totalAmount: 0,
+})
+
 // Steps configuration
 const stepItems = computed(() => [
   { label: labels.import.stepSource },
@@ -147,8 +159,11 @@ const isInvoiceSource = computed(() => selectedSource.value?.id === 'rainbow-inv
 // Check if source is email
 const isEmailSource = computed(() => selectedSource.value?.id === 'panbubu-email')
 
-// Check if source is file-based (invoice or email)
-const isFileSource = computed(() => isInvoiceSource.value || isEmailSource.value)
+// Check if source is Excel
+const isExcelSource = computed(() => selectedSource.value?.id === 'excel-supplier')
+
+// Check if source is file-based (invoice, email, or excel)
+const isFileSource = computed(() => isInvoiceSource.value || isEmailSource.value || isExcelSource.value)
 
 // Validation for step progression
 const canProceedStep1 = computed(() => !!selectedSource.value)
@@ -332,6 +347,30 @@ function mapEmailItemToProduct(item: PanbubuPreviewItem): ProductToImport {
   }
 }
 
+// Transform Excel preview item to ProductToImport
+function mapExcelItemToProduct(item: ExcelPreviewItem): ProductToImport {
+  return {
+    externalId: item.code,
+    code: item.code,
+    name: item.code, // Use code as name for Excel items
+    productType: item.productType,
+    costPriceRaw: item.costPrice,
+    costPrice: item.costPrice,
+    weightGrams: 0,
+    metalType: '',
+    size: item.size || '',
+    stockQty: item.quantity,
+    tags: [],
+    notes: item.notes,
+    imageUrl: item.imageDataUrl || item.imageUrl || '', // Prefer dataUrl for preview
+    suggestedCategoryId: item.suggestedCategoryId,
+    exists: item.exists,
+    selected: !item.exists,
+    priceRetail: item.suggestedRetailPrice,
+    priceWholesale: item.suggestedWholesalePrice,
+  }
+}
+
 // Handle invoice file upload
 async function onInvoiceSelect(event: { files: File[] }) {
   const file = event.files[0]
@@ -466,6 +505,66 @@ async function onEmailSelect(event: { files: File[] }) {
   }
 }
 
+// Handle Excel file upload
+async function onExcelSelect(event: { files: File[] }) {
+  const file = event.files[0]
+  if (!file) return
+
+  // Require supplier to be selected
+  if (!selectedSupplier.value) {
+    toast.add({
+      severity: 'warn',
+      summary: 'Atención',
+      detail: 'Selecciona un proveedor antes de subir el archivo Excel',
+      life: 5000,
+    })
+    return
+  }
+
+  parsingExcel.value = true
+  try {
+    // Get supplier name for prefix (first 2 letters uppercase)
+    const supplier = suppliers.value.find((s) => s.id === selectedSupplier.value)
+    const prefix = supplier ? supplier.name.substring(0, 2).toUpperCase() : 'AT'
+
+    const response = await api.import.parseExcel(file, prefix)
+
+    // Store the Excel file for later upload (re-parsing for images)
+    excelFile.value = file
+
+    // Store Excel info
+    excelInfo.value = {
+      shippingCost: response.shippingCost,
+      totalAmount: response.totalAmount,
+    }
+
+    // Transform to ProductToImport format
+    products.value = response.items.map(mapExcelItemToProduct)
+    hasMorePages.value = false
+
+    // Show summary
+    const summary = `${response.summary.total} productos encontrados, ${response.summary.existing} ya existen`
+
+    toast.add({
+      severity: 'info',
+      summary: 'Excel procesado',
+      detail: summary,
+      life: 5000,
+    })
+
+    nextStep()
+  } catch (err) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: err instanceof Error ? err.message : labels.messages.errorGeneric,
+      life: 5000,
+    })
+  } finally {
+    parsingExcel.value = false
+  }
+}
+
 // Apply margin to selected products
 function applyMargin(multiplier: number) {
   products.value
@@ -518,6 +617,17 @@ async function executeImport() {
   try {
     const isInvoiceImport = selectedSource.value!.id === 'rainbow-invoice'
     const isEmailImport = selectedSource.value!.id === 'panbubu-email'
+    const isExcelImport = selectedSource.value!.id === 'excel-supplier'
+
+    // Generate invoice number for Excel imports: {SUPPLIER-NAME}-{YYYY-MM-DD}-EXCEL
+    let excelInvoiceNumber: string | undefined
+    if (isExcelImport && selectedSupplier.value) {
+      const supplier = suppliers.value.find((s) => s.id === selectedSupplier.value)
+      if (supplier) {
+        const today = new Date().toISOString().split('T')[0]
+        excelInvoiceNumber = `${supplier.name.toUpperCase().replace(/ /g, '-')}-${today}-EXCEL`
+      }
+    }
 
     const result = await api.import.execute(
       {
@@ -531,6 +641,7 @@ async function executeImport() {
           costPrice: p.costPrice,
           imageUrl: p.imageUrl,
           notes: p.notes,
+          size: p.size || undefined,
           supplierId: selectedSupplier.value ?? undefined,
           categoryId: selectedCategory.value ?? p.suggestedCategoryId ?? undefined,
           quantity: p.stockQty || undefined,
@@ -540,26 +651,32 @@ async function executeImport() {
           ? invoiceInfo.value.number ?? undefined
           : isEmailImport
             ? emailInfo.value.orderNumber ?? undefined
-            : undefined,
+            : isExcelImport
+              ? excelInvoiceNumber
+              : undefined,
         invoiceDate: isInvoiceImport
           ? invoiceInfo.value.date ?? undefined
           : isEmailImport
             ? emailInfo.value.orderDate ?? undefined
-            : undefined,
+            : isExcelImport
+              ? new Date().toISOString().split('T')[0]
+              : undefined,
         supplierId: selectedSupplier.value ?? undefined,
         shippingCost: isInvoiceImport
           ? invoiceInfo.value.shippingCost || undefined
           : isEmailImport
             ? emailInfo.value.shippingCost || undefined
-            : undefined,
+            : isExcelImport
+              ? excelInfo.value.shippingCost || undefined
+              : undefined,
         // Save PDF to bucket (only for invoice)
         savePdf: isInvoiceImport && !!invoicePdfFile.value,
         // Tracking metadata (for panbubu-email source)
         trackingNumber: isEmailImport ? emailInfo.value.trackingNumber : undefined,
         carrier: isEmailImport ? emailInfo.value.carrier : undefined,
       },
-      // Pass the PDF file if available (only for invoice)
-      isInvoiceImport ? invoicePdfFile.value ?? undefined : undefined,
+      // Pass the file if available (PDF for invoice, Excel for excel-supplier)
+      isInvoiceImport ? invoicePdfFile.value ?? undefined : isExcelImport ? excelFile.value ?? undefined : undefined,
     )
 
     const message = labels.import.importedCount
@@ -666,7 +783,9 @@ onMounted(loadData)
                           ? 'pi pi-file-pdf'
                           : source.id === 'panbubu-email'
                             ? 'pi pi-envelope'
-                            : 'pi pi-file'
+                            : source.id === 'excel-supplier'
+                              ? 'pi pi-file-excel'
+                              : 'pi pi-file'
                     "
                   />
                 </div>
@@ -760,6 +879,56 @@ onMounted(loadData)
                   @select="onEmailSelect"
                 />
                 <p class="upload-hint">{{ labels.import.emailHint }}</p>
+              </div>
+            </div>
+
+            <!-- Excel upload (when source is excel-supplier) -->
+            <div v-else-if="isExcelSource" class="excel-upload-section">
+              <!-- Supplier selection first (required) -->
+              <div class="form-field">
+                <label>{{ labels.import.targetSupplier }} <span class="required">*</span></label>
+                <Select
+                  v-model="selectedSupplier"
+                  :options="supplierOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  :placeholder="labels.products.noSupplier"
+                  class="w-full"
+                />
+                <small class="field-hint">El prefijo del código se genera a partir del nombre del proveedor</small>
+              </div>
+
+              <!-- Category selection -->
+              <div class="form-field">
+                <label>{{ labels.import.defaultCategory }}</label>
+                <Select
+                  v-model="selectedCategory"
+                  :options="categoryOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  :placeholder="labels.products.noCategory"
+                  showClear
+                  class="w-full"
+                />
+              </div>
+
+              <!-- Excel file upload -->
+              <div v-if="parsingExcel" class="loading-container">
+                <ProgressSpinner />
+                <p>Procesando Excel...</p>
+              </div>
+
+              <div v-else class="excel-upload">
+                <FileUpload
+                  mode="basic"
+                  accept=".xlsx,.xls"
+                  :maxFileSize="10000000"
+                  :auto="true"
+                  chooseLabel="Subir archivo Excel"
+                  :disabled="!selectedSupplier"
+                  @select="onExcelSelect"
+                />
+                <p class="upload-hint">Formatos aceptados: .xlsx, .xls (máx. 10MB)</p>
               </div>
             </div>
 
@@ -1071,6 +1240,22 @@ onMounted(loadData)
                       <span class="totals-value">{{ emailInfo.trackingNumber }} ({{ emailInfo.carrier }})</span>
                     </div>
                   </div>
+
+                  <!-- Excel totals -->
+                  <div v-if="isExcelSource && excelInfo.totalAmount > 0" class="invoice-totals">
+                    <div class="totals-row">
+                      <span class="totals-label">{{ labels.supplierOrders.subtotalProducts }}</span>
+                      <span class="totals-value">{{ formatCurrency(excelInfo.totalAmount - excelInfo.shippingCost) }}</span>
+                    </div>
+                    <div v-if="excelInfo.shippingCost > 0" class="totals-row">
+                      <span class="totals-label">{{ labels.supplierOrders.shipping }}</span>
+                      <span class="totals-value">{{ formatCurrency(excelInfo.shippingCost) }}</span>
+                    </div>
+                    <div class="totals-row grand-total">
+                      <span class="totals-label">{{ labels.supplierOrders.grandTotal }}</span>
+                      <span class="totals-value">{{ formatCurrency(excelInfo.totalAmount) }}</span>
+                    </div>
+                  </div>
                 </template>
               </Card>
 
@@ -1273,9 +1458,10 @@ onMounted(loadData)
   gap: var(--spacing-lg);
 }
 
-/* Invoice upload */
+/* Invoice/Email/Excel upload */
 .invoice-upload-section,
-.email-upload-section {
+.email-upload-section,
+.excel-upload-section {
   max-width: 500px;
   margin: 0 auto;
   display: flex;
@@ -1284,7 +1470,8 @@ onMounted(loadData)
 }
 
 .invoice-upload,
-.email-upload {
+.email-upload,
+.excel-upload {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1299,6 +1486,15 @@ onMounted(loadData)
   color: var(--color-text-muted);
   font-size: 0.9em;
   margin: 0;
+}
+
+.field-hint {
+  color: var(--color-text-muted);
+  font-size: 0.85em;
+}
+
+.required {
+  color: var(--p-red-500, #ef4444);
 }
 
 .invoice-options {

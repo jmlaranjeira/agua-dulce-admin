@@ -23,6 +23,7 @@ import type {
   ImportResult,
   InvoicePreviewResponse,
   PanbubuPreviewResponse,
+  ExcelPreviewResponse,
   StockMovement,
   SupplierOrder,
 } from '@/types'
@@ -258,6 +259,40 @@ export const api = {
       }
 
       const response = await fetch(`${API_URL}/import/parse-email`, {
+        method: 'POST',
+        headers,
+        body: formData,
+      })
+
+      if (response.status === 401) {
+        authStore.logout()
+        router.push('/login')
+        throw new Error('Sesión expirada')
+      }
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}))
+        const message = error.message
+          ? Array.isArray(error.message)
+            ? error.message[0]
+            : error.message
+          : `Error ${response.status}`
+        throw new Error(message)
+      }
+
+      return response.json()
+    },
+    parseExcel: async (file: File, prefix: string = 'AT'): Promise<ExcelPreviewResponse> => {
+      const authStore = useAuthStore()
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const headers: HeadersInit = {}
+      if (authStore.token) {
+        headers['Authorization'] = `Bearer ${authStore.token}`
+      }
+
+      const response = await fetch(`${API_URL}/import/parse-excel?prefix=${prefix}`, {
         method: 'POST',
         headers,
         body: formData,

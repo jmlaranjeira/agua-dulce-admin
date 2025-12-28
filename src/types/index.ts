@@ -395,6 +395,49 @@ export type PanbubuPreviewResponse = {
 }
 
 // =============================================
+// Excel import types (Proveedores)
+// =============================================
+export type ExcelParsedItem = {
+  lineNumber: number
+  itemCode: string
+  originalCode: string
+  description: string
+  size: string | null
+  unitPrice: number
+  quantity: number
+  totalAmount: number
+  // imageBuffer y imageMimeType no se envían al frontend (solo se usa imageDataUrl)
+}
+
+export type ExcelPreviewItem = {
+  code: string
+  originalCode: string
+  name: string
+  imageUrl: string | null
+  imageDataUrl: string | null // data:image/jpeg;base64,... para preview
+  productType: string
+  costPrice: number
+  quantity: number
+  size: string | null
+  exists: boolean
+  suggestedRetailPrice: number
+  suggestedWholesalePrice: number
+  suggestedCategoryId: string | null
+  notes: string
+  parsedData: ExcelParsedItem
+}
+
+export type ExcelPreviewResponse = {
+  items: ExcelPreviewItem[]
+  shippingCost: number
+  totalAmount: number
+  summary: {
+    total: number
+    existing: number
+  }
+}
+
+// =============================================
 // Stock types
 // =============================================
 export type StockMovement = {
