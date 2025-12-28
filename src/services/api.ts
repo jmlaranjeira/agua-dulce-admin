@@ -22,6 +22,7 @@ import type {
   ExecuteImportRequest,
   ImportResult,
   InvoicePreviewResponse,
+  PanbubuPreviewResponse,
   StockMovement,
   SupplierOrder,
 } from '@/types'
@@ -223,6 +224,40 @@ export const api = {
       // No añadir Content-Type, el browser lo pone con el boundary
 
       const response = await fetch(`${API_URL}/import/parse-invoice`, {
+        method: 'POST',
+        headers,
+        body: formData,
+      })
+
+      if (response.status === 401) {
+        authStore.logout()
+        router.push('/login')
+        throw new Error('Sesión expirada')
+      }
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}))
+        const message = error.message
+          ? Array.isArray(error.message)
+            ? error.message[0]
+            : error.message
+          : `Error ${response.status}`
+        throw new Error(message)
+      }
+
+      return response.json()
+    },
+    parseEmail: async (file: File): Promise<PanbubuPreviewResponse> => {
+      const authStore = useAuthStore()
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const headers: HeadersInit = {}
+      if (authStore.token) {
+        headers['Authorization'] = `Bearer ${authStore.token}`
+      }
+
+      const response = await fetch(`${API_URL}/import/parse-email`, {
         method: 'POST',
         headers,
         body: formData,

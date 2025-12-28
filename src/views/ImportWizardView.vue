@@ -26,6 +26,7 @@ import type {
   Supplier,
   Category,
   InvoicePreviewItem,
+  PanbubuPreviewItem,
 } from '@/types'
 
 const router = useRouter()
@@ -75,6 +76,30 @@ const invoiceInfo = ref<{
 }>({ number: null, date: null, exists: false, existingId: null, subtotal: 0, shippingCost: 0 })
 const invoicePdfFile = ref<File | null>(null)
 
+// Email parsing state (for panbubu-email)
+const parsingEmail = ref(false)
+const emailInfo = ref<{
+  orderNumber: string | null
+  orderDate: string | null
+  orderExists: boolean
+  existingOrderId: string | null
+  trackingNumber?: string
+  carrier?: string
+  subtotal: number
+  shippingCost: number
+  chargeFee: number
+  total: number
+}>({
+  orderNumber: null,
+  orderDate: null,
+  orderExists: false,
+  existingOrderId: null,
+  subtotal: 0,
+  shippingCost: 0,
+  chargeFee: 0,
+  total: 0,
+})
+
 // Steps configuration
 const stepItems = computed(() => [
   { label: labels.import.stepSource },
@@ -119,11 +144,17 @@ const selectedCount = computed(() => selectedProducts.value.length)
 // Check if source is invoice
 const isInvoiceSource = computed(() => selectedSource.value?.id === 'rainbow-invoice')
 
+// Check if source is email
+const isEmailSource = computed(() => selectedSource.value?.id === 'panbubu-email')
+
+// Check if source is file-based (invoice or email)
+const isFileSource = computed(() => isInvoiceSource.value || isEmailSource.value)
+
 // Validation for step progression
 const canProceedStep1 = computed(() => !!selectedSource.value)
 const canProceedStep2 = computed(() => {
-  // Invoice source doesn't need validation in step 2
-  if (isInvoiceSource.value) return true
+  // File-based sources don't need validation in step 2
+  if (isFileSource.value) return true
   return searchQuery.value.trim().length > 0 || !!selectedType.value
 })
 const canProceedStep3 = computed(() => {
@@ -277,6 +308,30 @@ function mapInvoiceItemToProduct(item: InvoicePreviewItem): ProductToImport {
   }
 }
 
+// Transform email preview item to ProductToImport
+function mapEmailItemToProduct(item: PanbubuPreviewItem): ProductToImport {
+  return {
+    externalId: item.code,
+    code: item.code,
+    name: item.name,
+    productType: item.productType,
+    costPriceRaw: item.costPrice,
+    costPrice: item.costPrice,
+    weightGrams: 0,
+    metalType: '',
+    size: '',
+    stockQty: item.quantity,
+    tags: [],
+    notes: item.notes,
+    imageUrl: item.imageUrl || '',
+    suggestedCategoryId: item.suggestedCategoryId,
+    exists: item.exists,
+    selected: !item.exists,
+    priceRetail: item.suggestedRetailPrice,
+    priceWholesale: item.suggestedWholesalePrice,
+  }
+}
+
 // Handle invoice file upload
 async function onInvoiceSelect(event: { files: File[] }) {
   const file = event.files[0]
@@ -344,6 +399,73 @@ async function onInvoiceSelect(event: { files: File[] }) {
   }
 }
 
+// Handle email file upload
+async function onEmailSelect(event: { files: File[] }) {
+  const file = event.files[0]
+  if (!file) return
+
+  parsingEmail.value = true
+  try {
+    const response = await api.import.parseEmail(file)
+
+    // Store email info
+    emailInfo.value = {
+      orderNumber: response.orderNumber,
+      orderDate: response.orderDate,
+      orderExists: response.orderExists,
+      existingOrderId: response.existingOrderId,
+      trackingNumber: response.trackingNumber,
+      carrier: response.carrier,
+      subtotal: response.subtotal,
+      shippingCost: response.shippingCost,
+      chargeFee: response.chargeFee,
+      total: response.total,
+    }
+
+    // Transform to ProductToImport format
+    products.value = response.items.map(mapEmailItemToProduct)
+    hasMorePages.value = false
+
+    // Set suggested supplier if not already selected
+    if (!selectedSupplier.value && response.suggestedSupplierId) {
+      selectedSupplier.value = response.suggestedSupplierId
+    }
+
+    // Show warning if order exists
+    if (response.orderExists) {
+      toast.add({
+        severity: 'warn',
+        summary: labels.import.orderExists,
+        detail: labels.import.orderExistsDetail.replace('{number}', response.orderNumber || ''),
+        life: 8000,
+      })
+    }
+
+    // Show summary
+    const summary = labels.import.emailSummary
+      .replace('{total}', String(response.summary.total))
+      .replace('{existing}', String(response.summary.existing))
+
+    toast.add({
+      severity: 'info',
+      summary: 'Email procesado',
+      detail: summary,
+      life: 5000,
+    })
+
+    nextStep()
+  } catch (err) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: err instanceof Error ? err.message : labels.messages.errorGeneric,
+      life: 5000,
+    })
+  } finally {
+    parsingEmail.value = false
+  }
+}
+
 // Apply margin to selected products
 function applyMargin(multiplier: number) {
   products.value
@@ -395,6 +517,8 @@ async function executeImport() {
   importing.value = true
   try {
     const isInvoiceImport = selectedSource.value!.id === 'rainbow-invoice'
+    const isEmailImport = selectedSource.value!.id === 'panbubu-email'
+
     const result = await api.import.execute(
       {
         source: selectedSource.value!.id,
@@ -411,15 +535,30 @@ async function executeImport() {
           categoryId: selectedCategory.value ?? p.suggestedCategoryId ?? undefined,
           quantity: p.stockQty || undefined,
         })),
-        // Invoice metadata (for rainbow-invoice source)
-        invoiceNumber: invoiceInfo.value.number ?? undefined,
-        invoiceDate: invoiceInfo.value.date ?? undefined,
+        // Invoice/Order metadata
+        invoiceNumber: isInvoiceImport
+          ? invoiceInfo.value.number ?? undefined
+          : isEmailImport
+            ? emailInfo.value.orderNumber ?? undefined
+            : undefined,
+        invoiceDate: isInvoiceImport
+          ? invoiceInfo.value.date ?? undefined
+          : isEmailImport
+            ? emailInfo.value.orderDate ?? undefined
+            : undefined,
         supplierId: selectedSupplier.value ?? undefined,
-        shippingCost: invoiceInfo.value.shippingCost || undefined,
-        // Save PDF to bucket
+        shippingCost: isInvoiceImport
+          ? invoiceInfo.value.shippingCost || undefined
+          : isEmailImport
+            ? emailInfo.value.shippingCost || undefined
+            : undefined,
+        // Save PDF to bucket (only for invoice)
         savePdf: isInvoiceImport && !!invoicePdfFile.value,
+        // Tracking metadata (for panbubu-email source)
+        trackingNumber: isEmailImport ? emailInfo.value.trackingNumber : undefined,
+        carrier: isEmailImport ? emailInfo.value.carrier : undefined,
       },
-      // Pass the PDF file if available
+      // Pass the PDF file if available (only for invoice)
       isInvoiceImport ? invoicePdfFile.value ?? undefined : undefined,
     )
 
@@ -525,7 +664,9 @@ onMounted(loadData)
                         ? 'pi pi-globe'
                         : source.id === 'rainbow-invoice'
                           ? 'pi pi-file-pdf'
-                          : 'pi pi-file'
+                          : source.id === 'panbubu-email'
+                            ? 'pi pi-envelope'
+                            : 'pi pi-file'
                     "
                   />
                 </div>
@@ -584,6 +725,41 @@ onMounted(loadData)
                   @select="onInvoiceSelect"
                 />
                 <p class="upload-hint">{{ labels.import.invoiceEurOnly }}</p>
+              </div>
+            </div>
+
+            <!-- Email upload (when source is panbubu-email) -->
+            <div v-else-if="isEmailSource" class="email-upload-section">
+              <!-- Supplier selection first -->
+              <div class="form-field">
+                <label>{{ labels.import.targetSupplier }}</label>
+                <Select
+                  v-model="selectedSupplier"
+                  :options="supplierOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  :placeholder="labels.products.noSupplier"
+                  showClear
+                  class="w-full"
+                />
+              </div>
+
+              <!-- Email file upload -->
+              <div v-if="parsingEmail" class="loading-container">
+                <ProgressSpinner />
+                <p>{{ labels.import.parsingEmail }}</p>
+              </div>
+
+              <div v-else class="email-upload">
+                <FileUpload
+                  mode="basic"
+                  accept=".eml"
+                  :maxFileSize="5000000"
+                  :auto="true"
+                  :chooseLabel="labels.import.uploadEmail"
+                  @select="onEmailSelect"
+                />
+                <p class="upload-hint">{{ labels.import.emailHint }}</p>
               </div>
             </div>
 
@@ -657,6 +833,16 @@ onMounted(loadData)
                 <strong>{{ labels.import.invoiceExists }}:</strong> {{ invoiceInfo.number }}
                 <RouterLink :to="`/supplier-orders/${invoiceInfo.existingId}`" class="view-link">
                   {{ labels.import.viewExistingInvoice }}
+                </RouterLink>
+              </div>
+            </Message>
+
+            <!-- Order exists warning (for email) -->
+            <Message v-if="emailInfo.orderExists" severity="warn" :closable="false" class="invoice-warning">
+              <div class="warning-content">
+                <strong>{{ labels.import.orderExists }}:</strong> {{ emailInfo.orderNumber }}
+                <RouterLink :to="`/supplier-orders/${emailInfo.existingOrderId}`" class="view-link">
+                  {{ labels.import.viewExistingOrder }}
                 </RouterLink>
               </div>
             </Message>
@@ -802,6 +988,16 @@ onMounted(loadData)
                 </div>
               </Message>
 
+              <!-- Order exists warning (for email) -->
+              <Message v-if="emailInfo.orderExists" severity="warn" :closable="false" class="invoice-warning">
+                <div class="warning-content">
+                  <strong>{{ labels.import.orderExists }}:</strong> {{ emailInfo.orderNumber }}
+                  <RouterLink :to="`/supplier-orders/${emailInfo.existingOrderId}`" class="view-link">
+                    {{ labels.import.viewExistingOrder }}
+                  </RouterLink>
+                </div>
+              </Message>
+
               <Card class="summary-card">
                 <template #content>
                   <h3>{{ labels.import.summary }}</h3>
@@ -830,7 +1026,7 @@ onMounted(loadData)
                       <span class="summary-label">{{ labels.import.retail }} total</span>
                       <span class="summary-value highlight">{{ formatCurrency(totalRetail) }}</span>
                     </div>
-                    <div v-if="isInvoiceSource" class="summary-item">
+                    <div v-if="isFileSource" class="summary-item">
                       <span class="summary-label">{{ labels.import.totalStockToAdd }}</span>
                       <span class="summary-value">{{ totalStock }} uds.</span>
                     </div>
@@ -851,6 +1047,30 @@ onMounted(loadData)
                       <span class="totals-value">{{ formatCurrency(invoiceInfo.subtotal + invoiceInfo.shippingCost) }}</span>
                     </div>
                   </div>
+
+                  <!-- Email totals -->
+                  <div v-if="isEmailSource && emailInfo.subtotal > 0" class="invoice-totals">
+                    <div class="totals-row">
+                      <span class="totals-label">{{ labels.supplierOrders.subtotalProducts }}</span>
+                      <span class="totals-value">{{ formatCurrency(emailInfo.subtotal) }}</span>
+                    </div>
+                    <div v-if="emailInfo.shippingCost > 0" class="totals-row">
+                      <span class="totals-label">{{ labels.supplierOrders.shipping }}</span>
+                      <span class="totals-value">{{ formatCurrency(emailInfo.shippingCost) }}</span>
+                    </div>
+                    <div v-if="emailInfo.chargeFee > 0" class="totals-row">
+                      <span class="totals-label">Charge Fee</span>
+                      <span class="totals-value">{{ formatCurrency(emailInfo.chargeFee) }}</span>
+                    </div>
+                    <div class="totals-row grand-total">
+                      <span class="totals-label">{{ labels.supplierOrders.grandTotal }}</span>
+                      <span class="totals-value">{{ formatCurrency(emailInfo.total) }}</span>
+                    </div>
+                    <div v-if="emailInfo.trackingNumber" class="totals-row">
+                      <span class="totals-label">Tracking</span>
+                      <span class="totals-value">{{ emailInfo.trackingNumber }} ({{ emailInfo.carrier }})</span>
+                    </div>
+                  </div>
                 </template>
               </Card>
 
@@ -862,7 +1082,7 @@ onMounted(loadData)
                 </Column>
                 <Column field="code" :header="labels.fields.code" style="width: 200px" />
                 <Column field="name" :header="labels.fields.name" style="max-width: 150px" />
-                <Column v-if="isInvoiceSource" :header="labels.fields.stock" style="width: 80px">
+                <Column v-if="isFileSource" :header="labels.fields.stock" style="width: 80px">
                   <template #body="{ data }">
                     <Tag :value="data.stockQty" severity="info" />
                   </template>
@@ -1054,7 +1274,8 @@ onMounted(loadData)
 }
 
 /* Invoice upload */
-.invoice-upload-section {
+.invoice-upload-section,
+.email-upload-section {
   max-width: 500px;
   margin: 0 auto;
   display: flex;
@@ -1062,7 +1283,8 @@ onMounted(loadData)
   gap: var(--spacing-xl);
 }
 
-.invoice-upload {
+.invoice-upload,
+.email-upload {
   display: flex;
   flex-direction: column;
   align-items: center;

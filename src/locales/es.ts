@@ -272,6 +272,15 @@ export const labels = {
     invoiceExistsDetail: 'La factura {number} ya está en el sistema. Puedes continuar pero no se creará un duplicado.',
     viewExistingInvoice: 'Ver factura existente',
     totalStockToAdd: 'Stock total a añadir',
+
+    // Email import
+    parsingEmail: 'Procesando email...',
+    uploadEmail: 'Subir Email (.eml)',
+    emailHint: 'Sube el email de confirmación de Panbubu',
+    emailSummary: '{total} productos encontrados, {existing} ya existen',
+    orderExists: 'Este pedido ya existe',
+    orderExistsDetail: 'El pedido {number} ya fue importado anteriormente',
+    viewExistingOrder: 'Ver pedido existente',
   },
   stock: {
     stock: 'Stock',

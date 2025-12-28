@@ -59,6 +59,7 @@ export type Product = {
   priceWholesale: number | null
   costPrice: number | null
   imageUrl: string | null
+  size: string | null
   isActive: boolean
   stock: number
   supplierId: string | null
@@ -255,6 +256,7 @@ export type ImportProductItem = {
   costPrice?: number
   imageUrl?: string
   notes?: string
+  size?: string
   supplierId?: string
   categoryId?: string
   quantity?: number
@@ -269,6 +271,9 @@ export type ExecuteImportRequest = {
   supplierId?: string
   shippingCost?: number
   savePdf?: boolean
+  // Tracking metadata (for panbubu-email source)
+  trackingNumber?: string
+  carrier?: string
 }
 
 export type ImportResult = {
@@ -317,6 +322,56 @@ export type InvoicePreviewResponse = {
   summary: {
     total: number
     found: number
+    existing: number
+  }
+}
+
+// =============================================
+// Panbubu email import types
+// =============================================
+export type PanbubuParsedItem = {
+  productId: string
+  name: string
+  variantNumber?: string
+  size?: string
+  colour?: string
+  unitPrice: number
+  quantity: number
+  subtotal: number
+  imageUrl?: string
+}
+
+export type PanbubuPreviewItem = {
+  code: string
+  name: string
+  imageUrl: string | null
+  productType: string
+  costPrice: number
+  quantity: number
+  size: string | null
+  exists: boolean
+  suggestedRetailPrice: number
+  suggestedWholesalePrice: number
+  suggestedCategoryId: string | null
+  notes: string
+  parsedData: PanbubuParsedItem
+}
+
+export type PanbubuPreviewResponse = {
+  orderNumber: string
+  orderDate: string
+  orderExists: boolean
+  existingOrderId: string | null
+  trackingNumber?: string
+  carrier?: string
+  items: PanbubuPreviewItem[]
+  suggestedSupplierId: string
+  subtotal: number
+  shippingCost: number
+  chargeFee: number
+  total: number
+  summary: {
+    total: number
     existing: number
   }
 }
