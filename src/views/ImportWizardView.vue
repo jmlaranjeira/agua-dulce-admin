@@ -1137,6 +1137,14 @@ onMounted(loadData)
                 @click="loadMoreProducts"
               />
             </div>
+
+            <!-- Validation message -->
+            <Message v-if="selectedCount === 0" severity="warn" :closable="false" class="validation-message">
+              Selecciona al menos un producto para continuar
+            </Message>
+            <Message v-else-if="!canProceedStep3" severity="info" :closable="false" class="validation-message">
+              Aplica un margen de precio a los productos seleccionados (todos deben tener precio de venta)
+            </Message>
           </div>
 
           <!-- Step 4: Confirm -->
@@ -1570,6 +1578,10 @@ onMounted(loadData)
 .load-more-container {
   display: flex;
   justify-content: center;
+  margin-top: var(--spacing-lg);
+}
+
+.validation-message {
   margin-top: var(--spacing-lg);
 }
 
