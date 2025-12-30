@@ -59,9 +59,9 @@ const newCustomerForm = ref<CreateCustomer>({
 const savingCustomer = ref(false)
 const customerErrors = ref<Record<string, string>>({})
 
-// Shipping address
-const customerAddresses = ref<CustomerAddress[]>([])
-const selectedShippingAddressId = ref<string | null>(null)
+// TODO: Shipping address - implementar en fase futura
+// const customerAddresses = ref<CustomerAddress[]>([])
+// const selectedShippingAddressId = ref<string | null>(null)
 
 // Product search modal
 const categories = ref<Category[]>([])
@@ -85,9 +85,9 @@ const customerTypeOptions: { value: CustomerType; label: string }[] = [
 
 function getEffectivePrice(product: Product): number {
   if (isWholesaleCustomer.value && product.priceWholesale) {
-    return product.priceWholesale
+    return Number(product.priceWholesale) || 0
   }
-  return product.priceRetail
+  return Number(product.priceRetail) || 0
 }
 
 function hasWholesalePrice(product: Product): boolean {
@@ -156,24 +156,8 @@ async function loadCategories() {
   }
 }
 
-// Watch customer changes to load addresses and recalculate prices
+// Watch customer changes to recalculate prices
 watch(selectedCustomer, async (newCustomer, oldCustomer) => {
-  selectedShippingAddressId.value = null
-  customerAddresses.value = []
-
-  if (newCustomer) {
-    try {
-      customerAddresses.value = await api.customerAddresses.getByCustomer(newCustomer.id)
-      // Auto-select default address
-      const defaultAddress = customerAddresses.value.find((a) => a.isDefault)
-      if (defaultAddress) {
-        selectedShippingAddressId.value = defaultAddress.id
-      }
-    } catch (err) {
-      console.error('Error loading addresses:', err)
-    }
-  }
-
   // Recalculate prices if customer type changed
   if (newCustomer?.type !== oldCustomer?.type) {
     orderItems.value.forEach((item) => {
@@ -181,12 +165,6 @@ watch(selectedCustomer, async (newCustomer, oldCustomer) => {
     })
   }
 })
-
-function getAddressLabel(addressId: string): string {
-  const address = customerAddresses.value.find((a) => a.id === addressId)
-  if (!address) return ''
-  return `${address.label} - ${address.street}, ${address.city}`
-}
 
 function searchProducts(event: { query: string }) {
   const query = event.query.toLowerCase()
@@ -198,17 +176,18 @@ function searchProducts(event: { query: string }) {
 }
 
 function addItem() {
-  if (!selectedProduct.value || quantity.value < 1) return
+  if (!selectedProduct.value) return
 
   const product = selectedProduct.value
+  const qty = Math.max(1, Math.floor(Number(quantity.value) || 1))
   const existingItem = orderItems.value.find((item) => item.product.id === product.id)
 
   if (existingItem) {
-    existingItem.quantity += quantity.value
+    existingItem.quantity += qty
   } else {
     orderItems.value.push({
       product,
-      quantity: quantity.value,
+      quantity: qty,
       unitPrice: getEffectivePrice(product),
     })
   }
@@ -315,7 +294,6 @@ async function createOrder() {
   try {
     const data: CreateOrder = {
       customerId: selectedCustomer.value.id,
-      shippingAddressId: selectedShippingAddressId.value || undefined,
       items: orderItems.value.map((item) => ({
         productId: item.product.id,
         quantity: item.quantity,
@@ -372,6 +350,7 @@ onMounted(() => {
                   filter
                   class="customer-select"
                   :disabled="loading"
+                  appendTo="body"
                 />
                 <Button
                   icon="pi pi-plus"
@@ -387,38 +366,7 @@ onMounted(() => {
               </small>
             </div>
 
-            <div class="form-section">
-              <label>{{ labels.address.shippingAddress }}</label>
-              <Select
-                v-if="selectedCustomer && customerAddresses.length > 0"
-                v-model="selectedShippingAddressId"
-                :options="customerAddresses"
-                optionLabel="label"
-                optionValue="id"
-                :placeholder="labels.address.selectAddress"
-                class="w-full"
-                showClear
-              >
-                <template #option="{ option }">
-                  <div class="address-option">
-                    <span class="address-option-label">
-                      {{ option.label }}
-                      <Tag v-if="option.isDefault" severity="success" value="Principal" size="small" />
-                    </span>
-                    <span class="address-option-detail">
-                      {{ option.street }}, {{ option.postalCode }} {{ option.city }}
-                    </span>
-                  </div>
-                </template>
-                <template #value="slotProps">
-                  <span v-if="slotProps.value">{{ getAddressLabel(slotProps.value) }}</span>
-                  <span v-else>{{ slotProps.placeholder }}</span>
-                </template>
-              </Select>
-              <div v-else class="no-address-placeholder">
-                <span class="text-muted">{{ selectedCustomer ? labels.address.noAddresses : labels.address.selectAddress }}</span>
-              </div>
-            </div>
+            <!-- TODO: Implementar gestión de direcciones de envío en fase futura -->
           </div>
 
           <!-- Fila 2: Productos (ancho completo) -->
@@ -442,6 +390,7 @@ onMounted(() => {
                   @complete="searchProducts"
                   class="w-full"
                   :disabled="loading"
+                  appendTo="body"
                 >
                   <template #option="{ option }">
                     <div class="product-option">
