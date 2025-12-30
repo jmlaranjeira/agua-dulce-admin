@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
+import { useConfirm } from 'primevue/useconfirm'
 import Card from 'primevue/card'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
@@ -10,6 +11,7 @@ import InputText from 'primevue/inputtext'
 import IconField from 'primevue/iconfield'
 import InputIcon from 'primevue/inputicon'
 import Tag from 'primevue/tag'
+import Select from 'primevue/select'
 import { api } from '@/services/api'
 import { labels } from '@/locales/es'
 import { useBreakpoints } from '@/composables/useBreakpoints'
@@ -17,11 +19,19 @@ import type { Customer, CustomerType } from '@/types'
 
 const router = useRouter()
 const toast = useToast()
+const confirm = useConfirm()
 const { isMobile } = useBreakpoints()
 
 const customers = ref<Customer[]>([])
 const loading = ref(true)
 const searchQuery = ref('')
+const statusFilter = ref<'all' | 'active' | 'archived'>('active')
+
+const statusOptions = [
+  { value: 'all', label: 'Todos' },
+  { value: 'active', label: 'Activos' },
+  { value: 'archived', label: 'Archivados' },
+]
 
 const filteredCustomers = computed(() => {
   if (!searchQuery.value) return customers.value
@@ -37,7 +47,8 @@ const filteredCustomers = computed(() => {
 async function loadCustomers() {
   loading.value = true
   try {
-    customers.value = await api.customers.list()
+    const activeFilter = statusFilter.value === 'all' ? undefined : statusFilter.value === 'active'
+    customers.value = await api.customers.list({ active: activeFilter })
   } catch (err) {
     toast.add({
       severity: 'error',
@@ -49,6 +60,8 @@ async function loadCustomers() {
     loading.value = false
   }
 }
+
+watch(statusFilter, loadCustomers)
 
 function goToNew() {
   router.push('/customers/new')
@@ -67,19 +80,80 @@ function getTypeSeverity(type: CustomerType): 'info' | 'warn' {
   return type === 'WHOLESALE' ? 'warn' : 'info'
 }
 
+function confirmArchive(customer: Customer) {
+  confirm.require({
+    message: `¿Estás seguro de que quieres archivar a "${customer.name}"?`,
+    header: 'Archivar cliente',
+    icon: 'pi pi-exclamation-triangle',
+    acceptLabel: 'Archivar',
+    rejectLabel: 'Cancelar',
+    acceptClass: 'p-button-warning',
+    accept: () => archiveCustomer(customer),
+  })
+}
+
+async function archiveCustomer(customer: Customer) {
+  try {
+    await api.customers.archive(customer.id)
+    toast.add({
+      severity: 'success',
+      summary: 'OK',
+      detail: 'Cliente archivado correctamente',
+      life: 3000,
+    })
+    loadCustomers()
+  } catch (err) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: err instanceof Error ? err.message : labels.messages.errorGeneric,
+      life: 3000,
+    })
+  }
+}
+
+async function restoreCustomer(customer: Customer) {
+  try {
+    await api.customers.restore(customer.id)
+    toast.add({
+      severity: 'success',
+      summary: 'OK',
+      detail: 'Cliente restaurado correctamente',
+      life: 3000,
+    })
+    loadCustomers()
+  } catch (err) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: err instanceof Error ? err.message : labels.messages.errorGeneric,
+      life: 3000,
+    })
+  }
+}
+
 onMounted(loadCustomers)
 </script>
 
 <template>
   <div class="customers-view">
     <div class="view-header">
-      <IconField class="search-box">
-        <InputIcon class="pi pi-search" />
-        <InputText
-          v-model="searchQuery"
-          :placeholder="labels.actions.search"
+      <div class="header-filters">
+        <IconField class="search-box">
+          <InputIcon class="pi pi-search" />
+          <InputText
+            v-model="searchQuery"
+            :placeholder="labels.actions.search"
+          />
+        </IconField>
+        <Select
+          v-model="statusFilter"
+          :options="statusOptions"
+          optionLabel="label"
+          optionValue="value"
+          class="status-filter"
         />
-      </IconField>
+      </div>
       <Button
         :label="isMobile ? undefined : labels.customers.newCustomer"
         icon="pi pi-plus"
@@ -121,6 +195,15 @@ onMounted(loadCustomers)
             </template>
           </Column>
 
+          <Column header="Estado" style="width: 100px">
+            <template #body="{ data }">
+              <Tag
+                :value="data.isActive ? 'Activo' : 'Archivado'"
+                :severity="data.isActive ? 'success' : 'secondary'"
+              />
+            </template>
+          </Column>
+
           <Column field="notes" :header="labels.fields.notes" class="hidden-tablet">
             <template #body="{ data }">
               <span :title="data.notes || ''" v-tooltip.top="data.notes">
@@ -129,7 +212,7 @@ onMounted(loadCustomers)
             </template>
           </Column>
 
-          <Column :header="labels.fields.actions" style="width: 80px">
+          <Column :header="labels.fields.actions" style="width: 120px">
             <template #body="{ data }">
               <div class="actions">
                 <Button
@@ -138,6 +221,24 @@ onMounted(loadCustomers)
                   rounded
                   v-tooltip.top="labels.actions.edit"
                   @click.stop="goToEdit(data.id)"
+                />
+                <Button
+                  v-if="data.isActive"
+                  icon="pi pi-inbox"
+                  text
+                  rounded
+                  severity="warn"
+                  v-tooltip.top="'Archivar'"
+                  @click.stop="confirmArchive(data)"
+                />
+                <Button
+                  v-else
+                  icon="pi pi-replay"
+                  text
+                  rounded
+                  severity="success"
+                  v-tooltip.top="'Restaurar'"
+                  @click.stop="restoreCustomer(data)"
                 />
               </div>
             </template>
@@ -161,18 +262,44 @@ onMounted(loadCustomers)
           <div class="mobile-card-header">
             <div>
               <div class="mobile-card-title">{{ customer.name }}</div>
-              <Tag
-                :value="labels.customerType[customer.type as keyof typeof labels.customerType]"
-                :severity="getTypeSeverity(customer.type)"
-                class="mt-1"
+              <div class="mobile-card-tags">
+                <Tag
+                  :value="labels.customerType[customer.type as keyof typeof labels.customerType]"
+                  :severity="getTypeSeverity(customer.type)"
+                />
+                <Tag
+                  v-if="!customer.isActive"
+                  value="Archivado"
+                  severity="secondary"
+                />
+              </div>
+            </div>
+            <div class="mobile-card-actions">
+              <Button
+                v-if="customer.isActive"
+                icon="pi pi-inbox"
+                text
+                rounded
+                size="small"
+                severity="warn"
+                @click.stop="confirmArchive(customer)"
+              />
+              <Button
+                v-else
+                icon="pi pi-replay"
+                text
+                rounded
+                size="small"
+                severity="success"
+                @click.stop="restoreCustomer(customer)"
+              />
+              <Button
+                icon="pi pi-chevron-right"
+                text
+                rounded
+                size="small"
               />
             </div>
-            <Button
-              icon="pi pi-chevron-right"
-              text
-              rounded
-              size="small"
-            />
           </div>
           <div class="mobile-card-content">
             <div class="mobile-card-row">
@@ -208,9 +335,19 @@ onMounted(loadCustomers)
   gap: var(--spacing-md);
 }
 
+.header-filters {
+  display: flex;
+  gap: var(--spacing-md);
+  flex: 1;
+}
+
 .search-box {
   flex: 1;
   max-width: 300px;
+}
+
+.status-filter {
+  min-width: 140px;
 }
 
 .search-box :deep(input) {
@@ -299,6 +436,17 @@ onMounted(loadCustomers)
   font-weight: 600;
   font-size: 1.1rem;
   color: var(--color-text);
+}
+
+.mobile-card-tags {
+  display: flex;
+  gap: var(--spacing-xs);
+  margin-top: var(--spacing-xs);
+}
+
+.mobile-card-actions {
+  display: flex;
+  align-items: center;
 }
 
 .mobile-card-content {

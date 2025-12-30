@@ -103,7 +103,12 @@ export const api = {
   },
 
   customers: {
-    list: () => request<Customer[]>('/customers'),
+    list: (filters?: { active?: boolean }) => {
+      const params = new URLSearchParams()
+      if (filters?.active !== undefined) params.set('active', String(filters.active))
+      const query = params.toString()
+      return request<Customer[]>(`/customers${query ? `?${query}` : ''}`)
+    },
     get: (id: string) => request<Customer>(`/customers/${id}`),
     orders: (id: string) => request<Order[]>(`/customers/${id}/orders`),
     create: (data: CreateCustomer) =>
@@ -111,6 +116,8 @@ export const api = {
     update: (id: string, data: UpdateCustomer) =>
       request<Customer>(`/customers/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
     delete: (id: string) => request(`/customers/${id}`, { method: 'DELETE' }),
+    archive: (id: string) => request<Customer>(`/customers/${id}/archive`, { method: 'PATCH' }),
+    restore: (id: string) => request<Customer>(`/customers/${id}/restore`, { method: 'PATCH' }),
   },
 
   customerAddresses: {

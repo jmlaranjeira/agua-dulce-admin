@@ -107,6 +107,7 @@ export type Customer = {
   name: string
   type: CustomerType
   notes: string | null
+  isActive: boolean
   addresses?: CustomerAddress[]
   createdAt: string
 }
