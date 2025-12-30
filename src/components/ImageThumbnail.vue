@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import { useImagePreview } from '@/composables/useImagePreview'
 
 const props = withDefaults(
@@ -13,13 +14,19 @@ const props = withDefaults(
   }
 )
 
+const imageError = ref(false)
+
+function handleImageError() {
+  imageError.value = true
+}
+
 const { previewImage, previewStyle, showPreview, updatePreviewPosition, hidePreview } =
   useImagePreview(props.previewSize)
 </script>
 
 <template>
   <img
-    v-if="src"
+    v-if="src && !imageError"
     :src="src"
     alt=""
     class="thumbnail"
@@ -27,8 +34,9 @@ const { previewImage, previewStyle, showPreview, updatePreviewPosition, hidePrev
     @mouseenter="showPreview($event, src)"
     @mousemove="updatePreviewPosition"
     @mouseleave="hidePreview"
+    @error="handleImageError"
   />
-  <span v-else class="pi pi-image placeholder-icon"></span>
+  <span v-else class="pi pi-image placeholder-icon" :style="{ fontSize: `${Math.max(size * 0.5, 16)}px` }"></span>
 
   <Teleport to="body">
     <div
