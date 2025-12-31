@@ -40,6 +40,7 @@ export type CategoryColor = { bg: string; text: string }
 export const CATEGORY_COLORS: Record<string, CategoryColor> = {
   anillos: { bg: '#dbeafe', text: '#1e40af' }, // blue
   pulseras: { bg: '#f3e8ff', text: '#6b21a8' }, // purple
+  charms: { bg: '#fef3c7', text: '#92400e' }, // amber/gold
   colgantes: { bg: '#ccfbf1', text: '#0f766e' }, // teal
   pendientes: { bg: '#fce7f3', text: '#9d174d' }, // pink
   collares: { bg: '#e0e7ff', text: '#3730a3' }, // indigo
