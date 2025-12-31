@@ -500,12 +500,6 @@ function calculateMargin(product: Product): number | null {
   return ((retail - cost) / retail) * 100
 }
 
-function getMarginSeverity(margin: number): 'danger' | 'warn' | 'success' {
-  if (margin < 20) return 'danger'
-  if (margin < 30) return 'warn'
-  return 'success'
-}
-
 function getCategoryColor(categoryId: string): CategoryColor {
   const category = categories.value.find((c) => c.id === categoryId)
   if (!category) return DEFAULT_CATEGORY_COLOR
@@ -624,23 +618,22 @@ onMounted(loadData)
             </div>
           </template>
 
-          <Column selectionMode="multiple" headerStyle="width: 3rem" />
+          <Column selectionMode="multiple" headerStyle="width: 2rem" />
 
           <Column header="" style="width: 60px">
             <template #body="{ data }">
-              <ImageThumbnail :src="data.imageUrl" :size="40" :preview-size="200" />
+              <ImageThumbnail :src="data.imageUrl" :size="50" :preview-size="200" />
             </template>
           </Column>
 
-          <Column field="code" :header="labels.fields.code" sortable style="width: 140px">
+          <Column field="code" header="Producto" sortable style="width: 280px">
             <template #body="{ data }">
-              <span class="product-code">{{ data.code }}</span>
-            </template>
-          </Column>
-
-          <Column field="name" :header="labels.fields.name" sortable style="width: 190px">
-            <template #body="{ data }">
-              <span class="product-name">{{ data.name }}</span>
+              <div class="product-cell">
+                <router-link :to="`/products/${data.id}/edit`" class="product-code">
+                  {{ data.code }}
+                </router-link>
+                <span class="product-name">{{ data.name }}</span>
+              </div>
             </template>
           </Column>
 
@@ -664,52 +657,36 @@ onMounted(loadData)
             </template>
           </Column>
 
-          <Column field="priceRetail" header="Precio" sortable style="width: 95px" class="text-right">
+          <Column field="priceRetail" header="Precio" sortable style="width: 110px" class="text-right">
             <template #body="{ data }">
-              <span class="product-price">{{ formatPrice(data.priceRetail) }}</span>
-            </template>
-          </Column>
-
-          <Column header="Margen" sortable style="width: 85px" class="text-center hidden-tablet">
-            <template #body="{ data }">
-              <Tag
-                v-if="calculateMargin(data) !== null"
-                :value="calculateMargin(data)!.toFixed(0) + '%'"
-                :severity="getMarginSeverity(calculateMargin(data)!)"
-              />
-              <span v-else class="text-muted">-</span>
+              <div class="price-cell">
+                <span class="price">{{ formatPrice(data.priceRetail) }}</span>
+                <span v-if="calculateMargin(data) !== null" class="margin">
+                  {{ calculateMargin(data)!.toFixed(0) }}%
+                </span>
+              </div>
             </template>
           </Column>
 
           <Column field="stock" :header="labels.fields.stock" sortable style="width: 75px" class="text-center">
             <template #body="{ data }">
-              <Tag :value="data.stock" :severity="getStockSeverity(data.stock)" />
+              <div class="stock-cell">
+                <Tag :value="data.stock" :severity="getStockSeverity(data.stock)" />
+              </div>
             </template>
           </Column>
 
-          <Column field="isActive" header="Estado" style="width: 90px" class="text-center">
+          <Column field="isActive" header="Estado" style="width: 100px">
             <template #body="{ data }">
-              <Tag
-                :value="data.isActive ? labels.products.active : labels.products.inactive"
-                :severity="data.isActive ? 'success' : 'danger'"
-              />
-            </template>
-          </Column>
-
-          <Column field="isVisible" header="Tienda" style="width: 80px" class="text-center">
-            <template #body="{ data }">
-              <i
-                v-if="data.isVisible"
-                class="pi pi-eye"
-                style="color: var(--p-green-500)"
-                v-tooltip.top="labels.products.visible"
-              />
-              <i
-                v-else
-                class="pi pi-eye-slash"
-                style="color: var(--p-text-muted-color)"
-                v-tooltip.top="labels.products.hidden"
-              />
+              <div class="status-cell">
+                <Tag
+                  :value="data.isActive ? labels.products.active : labels.products.inactive"
+                  :severity="data.isActive ? 'success' : 'danger'"
+                />
+                <span :class="data.isVisible ? 'visibility-visible' : 'visibility-hidden'">
+                  {{ data.isVisible ? 'Visible' : 'No visible' }}
+                </span>
+              </div>
             </template>
           </Column>
 
@@ -919,6 +896,16 @@ onMounted(loadData)
   padding: 0.875rem 1.25rem;
 }
 
+/* Reducir espacio en columna checkbox */
+.products-table :deep(.p-datatable-thead > tr > th.p-selection-column),
+.products-table :deep(.p-datatable-tbody > tr > td.p-selection-column) {
+  width: 2.5rem !important;
+  min-width: 2.5rem !important;
+  max-width: 2.5rem !important;
+  padding-left: 0.75rem !important;
+  padding-right: 0.25rem !important;
+}
+
 .products-table :deep(.p-datatable-tbody > tr:hover) {
   background-color: #f1f5f9 !important;
 }
@@ -929,16 +916,30 @@ onMounted(loadData)
   color: var(--color-text-muted);
 }
 
+/* Celda producto fusionada */
+.product-cell {
+  display: flex;
+  flex-direction: column;
+}
+
 .product-code {
-  font-family: monospace;
-  font-size: 0.875rem;
-  font-weight: 600;
+  font-size: 0.9375rem;
+  font-weight: 500;
   color: var(--color-primary);
+  text-decoration: none;
+}
+
+.product-code:hover {
+  text-decoration: underline;
 }
 
 .product-name {
-  font-weight: 500;
-  color: var(--color-text);
+  font-size: 1rem;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 250px;
 }
 
 .supplier-name {
@@ -948,6 +949,47 @@ onMounted(loadData)
 
 .product-price {
   font-weight: 600;
+}
+
+/* Celda precio con margen */
+.price-cell {
+  text-align: right;
+}
+
+.price-cell .price {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.price-cell .margin {
+  display: block;
+  font-size: 0.8125rem;
+  color: #10b981;
+}
+
+/* Celda stock centrada */
+.stock-cell {
+  text-align: center;
+}
+
+/* Celda estado con visibilidad */
+.status-cell {
+  text-align: left;
+}
+
+.status-cell .visibility-visible,
+.status-cell .visibility-hidden {
+  display: block;
+  font-size: 0.8125rem;
+  margin-top: 2px;
+}
+
+.status-cell .visibility-visible {
+  color: #10b981;
+}
+
+.status-cell .visibility-hidden {
+  color: var(--color-text-muted);
 }
 
 .text-muted {
