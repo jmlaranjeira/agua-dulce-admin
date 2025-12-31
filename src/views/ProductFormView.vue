@@ -31,6 +31,7 @@ const form = ref({
   supplierId: null as string | null,
   categoryId: null as string | null,
   isActive: true,
+  isVisible: true,
   stock: 0,
 })
 
@@ -104,6 +105,7 @@ async function loadData() {
         supplierId: product.supplierId,
         categoryId: product.categoryId,
         isActive: product.isActive,
+        isVisible: product.isVisible,
         stock: product.stock,
       }
     }
@@ -136,6 +138,7 @@ async function save() {
         supplierId: form.value.supplierId || undefined,
         categoryId: form.value.categoryId || undefined,
         isActive: form.value.isActive,
+        isVisible: form.value.isVisible,
       }
       await api.products.update(productId.value, data)
     } else {
@@ -183,8 +186,12 @@ onMounted(loadData)
     <Card>
       <template #content>
         <form @submit.prevent="save" class="form">
-          <!-- Toggle Active - Top Right (edit mode only) -->
+          <!-- Toggles - Top Right (edit mode only) -->
           <div v-if="isEditMode" class="form-header">
+            <div class="active-toggle">
+              <label for="isVisible">{{ labels.products.visibleInStore }}</label>
+              <InputSwitch id="isVisible" v-model="form.isVisible" :disabled="loading" />
+            </div>
             <div class="active-toggle">
               <label for="isActive">{{ labels.products.active }}</label>
               <InputSwitch id="isActive" v-model="form.isActive" :disabled="loading" />
@@ -347,6 +354,7 @@ onMounted(loadData)
 .form-header {
   display: flex;
   justify-content: flex-end;
+  gap: var(--spacing-lg);
 }
 
 .active-toggle {

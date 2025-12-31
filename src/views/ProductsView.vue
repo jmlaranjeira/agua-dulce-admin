@@ -50,6 +50,14 @@ const statusOptions = [
   { label: labels.products.inactive, value: false },
 ]
 
+const visibilityFilter = ref<boolean | null>(null)
+
+const visibilityOptions = [
+  { label: labels.products.allVisibility, value: null },
+  { label: labels.products.visible, value: true },
+  { label: labels.products.hidden, value: false },
+]
+
 const supplierOptions = computed(() => [
   { label: labels.products.allSuppliers, value: null },
   ...suppliers.value.map((s) => ({ label: s.name, value: s.id })),
@@ -103,6 +111,17 @@ const bulkActionsMenuItems = computed(() => [
   },
   { separator: true },
   {
+    label: labels.actions.showInStore,
+    icon: 'pi pi-eye',
+    command: confirmBulkShow,
+  },
+  {
+    label: labels.actions.hideFromStore,
+    icon: 'pi pi-eye-slash',
+    command: confirmBulkHide,
+  },
+  { separator: true },
+  {
     label: labels.actions.changeCategory,
     icon: 'pi pi-tag',
     command: () => (showCategoryDialog.value = true),
@@ -120,6 +139,7 @@ async function loadData() {
     const [productsData, suppliersData, categoriesData] = await Promise.all([
       api.products.list({
         active: statusFilter.value ?? undefined,
+        visible: visibilityFilter.value ?? undefined,
         supplierId: supplierFilter.value ?? undefined,
         categoryId: categoryFilter.value ?? undefined,
       }),
@@ -146,6 +166,7 @@ async function applyFilters() {
   try {
     products.value = await api.products.list({
       active: statusFilter.value ?? undefined,
+      visible: visibilityFilter.value ?? undefined,
       supplierId: supplierFilter.value ?? undefined,
       categoryId: categoryFilter.value ?? undefined,
     })
@@ -323,6 +344,74 @@ async function bulkDeactivate() {
   }
 }
 
+function confirmBulkShow() {
+  confirm.require({
+    message: `¿Mostrar ${selectedProducts.value.length} productos en la tienda?`,
+    header: labels.actions.showInStore,
+    icon: 'pi pi-eye',
+    acceptLabel: labels.actions.showInStore,
+    rejectLabel: labels.actions.cancel,
+    accept: bulkShow,
+  })
+}
+
+async function bulkShow() {
+  try {
+    await Promise.all(
+      selectedProducts.value.map((p) => api.products.update(p.id, { isVisible: true }))
+    )
+    selectedProducts.value.forEach((p) => (p.isVisible = true))
+    selectedProducts.value = []
+    toast.add({
+      severity: 'success',
+      summary: 'OK',
+      detail: labels.products.shownSuccess,
+      life: 3000,
+    })
+  } catch (err) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: err instanceof Error ? err.message : labels.messages.errorGeneric,
+      life: 3000,
+    })
+  }
+}
+
+function confirmBulkHide() {
+  confirm.require({
+    message: `¿Ocultar ${selectedProducts.value.length} productos de la tienda?`,
+    header: labels.actions.hideFromStore,
+    icon: 'pi pi-eye-slash',
+    acceptLabel: labels.actions.hideFromStore,
+    rejectLabel: labels.actions.cancel,
+    accept: bulkHide,
+  })
+}
+
+async function bulkHide() {
+  try {
+    await Promise.all(
+      selectedProducts.value.map((p) => api.products.update(p.id, { isVisible: false }))
+    )
+    selectedProducts.value.forEach((p) => (p.isVisible = false))
+    selectedProducts.value = []
+    toast.add({
+      severity: 'success',
+      summary: 'OK',
+      detail: labels.products.hiddenSuccess,
+      life: 3000,
+    })
+  } catch (err) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: err instanceof Error ? err.message : labels.messages.errorGeneric,
+      life: 3000,
+    })
+  }
+}
+
 async function bulkChangeCategory() {
   if (!selectedCategoryId.value) return
   try {
@@ -448,6 +537,15 @@ onMounted(loadData)
           optionLabel="label"
           optionValue="value"
           :placeholder="labels.products.allStatus"
+          class="filter-select"
+          @change="applyFilters"
+        />
+        <Select
+          v-model="visibilityFilter"
+          :options="visibilityOptions"
+          optionLabel="label"
+          optionValue="value"
+          :placeholder="labels.products.allVisibility"
           class="filter-select"
           @change="applyFilters"
         />
@@ -598,6 +696,23 @@ onMounted(loadData)
             </template>
           </Column>
 
+          <Column field="isVisible" header="Tienda" style="width: 80px" class="text-center">
+            <template #body="{ data }">
+              <i
+                v-if="data.isVisible"
+                class="pi pi-eye"
+                style="color: var(--p-green-500)"
+                v-tooltip.top="labels.products.visible"
+              />
+              <i
+                v-else
+                class="pi pi-eye-slash"
+                style="color: var(--p-text-muted-color)"
+                v-tooltip.top="labels.products.hidden"
+              />
+            </template>
+          </Column>
+
           <Column :header="labels.fields.actions" style="width: 110px">
             <template #body="{ data }">
               <div class="actions">
@@ -669,8 +784,12 @@ onMounted(loadData)
               />
             </div>
           </div>
-          <div v-if="!product.isActive" class="mobile-card-inactive">
-            <Tag :value="labels.products.inactive" severity="danger" />
+          <div v-if="!product.isActive || !product.isVisible" class="mobile-card-status">
+            <Tag v-if="!product.isActive" :value="labels.products.inactive" severity="danger" />
+            <Tag v-if="!product.isVisible" severity="secondary">
+              <i class="pi pi-eye-slash" style="margin-right: 4px"></i>
+              {{ labels.products.hidden }}
+            </Tag>
           </div>
         </div>
 
@@ -954,10 +1073,13 @@ onMounted(loadData)
   flex-shrink: 0;
 }
 
-.mobile-card-inactive {
+.mobile-card-status {
   margin-top: var(--spacing-sm);
   padding-top: var(--spacing-sm);
   border-top: 1px solid var(--color-border);
+  display: flex;
+  gap: var(--spacing-xs);
+  flex-wrap: wrap;
 }
 
 .loading-state {

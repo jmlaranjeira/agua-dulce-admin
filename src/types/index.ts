@@ -79,6 +79,7 @@ export type Product = {
   imageUrl: string | null
   size: string | null
   isActive: boolean
+  isVisible: boolean
   stock: number
   supplierId: string | null
   supplier?: Supplier
@@ -203,6 +204,7 @@ export type UpdateSupplier = Partial<CreateSupplier>
 
 export type UpdateProduct = Partial<CreateProduct> & {
   isActive?: boolean
+  isVisible?: boolean
 }
 
 export type UpdateCustomer = Partial<CreateCustomer>

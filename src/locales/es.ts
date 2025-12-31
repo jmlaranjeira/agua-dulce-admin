@@ -65,6 +65,8 @@ export const labels = {
     activate: 'Activar',
     changeCategory: 'Cambiar categoría',
     changeSupplier: 'Cambiar proveedor',
+    showInStore: 'Mostrar en tienda',
+    hideFromStore: 'Ocultar de tienda',
   },
   status: {
     PENDING: 'Pendiente',
@@ -154,6 +156,14 @@ export const labels = {
     bulkDeactivatedSuccess: 'Productos desactivados correctamente',
     categoryChangedSuccess: 'Categoría actualizada correctamente',
     supplierChangedSuccess: 'Proveedor actualizado correctamente',
+    shownSuccess: 'Productos mostrados en tienda',
+    hiddenSuccess: 'Productos ocultados de tienda',
+    // Visibility
+    visible: 'Visible',
+    hidden: 'Oculto',
+    visibleInStore: 'Visible en tienda',
+    visibleHint: 'Desactiva para productos que solo vendes por WhatsApp',
+    allVisibility: 'Toda visibilidad',
   },
   orders: {
     newOrder: 'Nuevo pedido',

@@ -86,9 +86,10 @@ export const api = {
   },
 
   products: {
-    list: (filters?: { active?: boolean; supplierId?: string; categoryId?: string }) => {
+    list: (filters?: { active?: boolean; visible?: boolean; supplierId?: string; categoryId?: string }) => {
       const params = new URLSearchParams()
       if (filters?.active !== undefined) params.set('active', String(filters.active))
+      if (filters?.visible !== undefined) params.set('visible', String(filters.visible))
       if (filters?.supplierId) params.set('supplierId', filters.supplierId)
       if (filters?.categoryId) params.set('categoryId', filters.categoryId)
       const query = params.toString()

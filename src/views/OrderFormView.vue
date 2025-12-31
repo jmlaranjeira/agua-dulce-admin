@@ -21,7 +21,7 @@ import { api } from '@/services/api'
 import { labels } from '@/locales/es'
 import { useOrderMargin } from '@/composables/useOrderMargin'
 import { useBreakpoints } from '@/composables/useBreakpoints'
-import type { Customer, Product, CreateOrder, CreateCustomer, CustomerAddress, Category, CustomerType } from '@/types'
+import type { Customer, Product, CreateOrder, CreateCustomer, Category, CustomerType } from '@/types'
 
 type OrderItemForm = {
   product: Product
