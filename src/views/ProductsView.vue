@@ -403,6 +403,20 @@ function getStockSeverity(stock: number): 'danger' | 'warn' | 'success' {
   return 'success'
 }
 
+function calculateMargin(product: Product): number | null {
+  if (!product.costPrice || !product.priceRetail) return null
+  const cost = Number(product.costPrice)
+  const retail = Number(product.priceRetail)
+  if (retail === 0) return null
+  return ((retail - cost) / retail) * 100
+}
+
+function getMarginSeverity(margin: number): 'danger' | 'warn' | 'success' {
+  if (margin < 20) return 'danger'
+  if (margin < 30) return 'warn'
+  return 'success'
+}
+
 function getCategoryColor(categoryId: string): CategoryColor {
   const category = categories.value.find((c) => c.id === categoryId)
   if (!category) return DEFAULT_CATEGORY_COLOR
@@ -555,6 +569,17 @@ onMounted(loadData)
           <Column field="priceRetail" header="Precio" sortable style="width: 95px" class="text-right">
             <template #body="{ data }">
               <span class="product-price">{{ formatPrice(data.priceRetail) }}</span>
+            </template>
+          </Column>
+
+          <Column header="Margen" sortable style="width: 85px" class="text-center hidden-tablet">
+            <template #body="{ data }">
+              <Tag
+                v-if="calculateMargin(data) !== null"
+                :value="calculateMargin(data)!.toFixed(0) + '%'"
+                :severity="getMarginSeverity(calculateMargin(data)!)"
+              />
+              <span v-else class="text-muted">-</span>
             </template>
           </Column>
 
