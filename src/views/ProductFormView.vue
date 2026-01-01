@@ -10,6 +10,7 @@ import InputSwitch from 'primevue/inputswitch'
 import Button from 'primevue/button'
 import Tag from 'primevue/tag'
 import ImageUpload from '@/components/ImageUpload.vue'
+import StockAdjustmentDialog from '@/components/StockAdjustmentDialog.vue'
 import { api } from '@/services/api'
 import { labels } from '@/locales/es'
 import type { Supplier, Category, CreateProduct, UpdateProduct } from '@/types'
@@ -40,6 +41,7 @@ const categories = ref<Category[]>([])
 const errors = ref<Record<string, string>>({})
 const loading = ref(false)
 const saving = ref(false)
+const showStockDialog = ref(false)
 
 const supplierOptions = computed(() => [
   { label: labels.products.noSupplier, value: null },
@@ -178,6 +180,23 @@ function cancel() {
   router.push('/products')
 }
 
+function openStockAdjustment() {
+  showStockDialog.value = true
+}
+
+function goToStockHistory() {
+  if (productId.value) {
+    router.push(`/stock?product=${productId.value}`)
+  }
+}
+
+async function onStockAdjusted() {
+  if (productId.value) {
+    const product = await api.products.get(productId.value)
+    form.value.stock = product.stock
+  }
+}
+
 onMounted(loadData)
 </script>
 
@@ -258,14 +277,34 @@ onMounted(loadData)
 
               <div v-if="isEditMode" class="form-field">
                 <label>{{ labels.fields.stock }}</label>
-                <div class="stock-display">
-                  <Tag
-                    :value="form.stock"
-                    :severity="form.stock < 5 ? 'danger' : form.stock < 10 ? 'warn' : 'success'"
-                  />
-                  <small v-if="form.stock < 5" class="stock-warning">
-                    <i class="pi pi-exclamation-triangle" /> {{ labels.stock.lowStockWarning }}
-                  </small>
+                <div class="stock-section">
+                  <div class="stock-display">
+                    <Tag
+                      :value="form.stock"
+                      :severity="form.stock < 5 ? 'danger' : form.stock < 10 ? 'warn' : 'success'"
+                    />
+                    <small v-if="form.stock < 5" class="stock-warning">
+                      <i class="pi pi-exclamation-triangle" /> {{ labels.stock.lowStockWarning }}
+                    </small>
+                  </div>
+                  <div class="stock-actions">
+                    <Button
+                      :label="labels.stock.adjustStock"
+                      icon="pi pi-pencil"
+                      size="small"
+                      outlined
+                      @click="openStockAdjustment"
+                      :disabled="loading"
+                    />
+                    <Button
+                      :label="labels.stock.viewHistory"
+                      icon="pi pi-history"
+                      size="small"
+                      text
+                      @click="goToStockHistory"
+                      :disabled="loading"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -337,6 +376,14 @@ onMounted(loadData)
         </form>
       </template>
     </Card>
+
+    <StockAdjustmentDialog
+      v-model="showStockDialog"
+      :product-id="productId || ''"
+      :product-name="form.name"
+      :current-stock="form.stock"
+      @adjusted="onStockAdjusted"
+    />
   </div>
 </template>
 
@@ -445,9 +492,20 @@ onMounted(loadData)
   color: #166534;
 }
 
+.stock-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
 .stock-display {
   display: flex;
   align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.stock-actions {
+  display: flex;
   gap: var(--spacing-sm);
 }
 
@@ -480,6 +538,14 @@ onMounted(loadData)
 
   .price-row {
     grid-template-columns: 1fr;
+  }
+
+  .stock-actions {
+    flex-direction: column;
+  }
+
+  .stock-actions button {
+    width: 100%;
   }
 
   .form-actions {

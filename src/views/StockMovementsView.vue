@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import Card from 'primevue/card'
 import DataTable from 'primevue/datatable'
@@ -11,6 +12,8 @@ import { labels } from '@/locales/es'
 import { useBreakpoints } from '@/composables/useBreakpoints'
 import type { StockMovement, Product, StockMovementType } from '@/types'
 
+const route = useRoute()
+const router = useRouter()
 const toast = useToast()
 const { isMobile } = useBreakpoints()
 
@@ -104,8 +107,20 @@ function onProductFilterChange() {
   loadMovements()
 }
 
+watch(productFilter, (newVal) => {
+  router.replace({
+    query: newVal ? { product: newVal } : {},
+  })
+})
+
 onMounted(async () => {
   await loadProducts()
+
+  // Pre-select product if provided in URL
+  if (route.query.product && typeof route.query.product === 'string') {
+    productFilter.value = route.query.product
+  }
+
   await loadMovements()
 })
 </script>
