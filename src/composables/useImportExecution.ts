@@ -79,6 +79,7 @@ export function useImportExecution() {
       const isInvoiceImport = sourceId === 'rainbow-invoice'
       const isEmailImport = sourceId === 'panbubu-email'
       const isExcelImport = sourceId === 'excel-supplier'
+      const isMayoristaPlataImport = sourceId === 'mayorista-plata'
 
       // Generate invoice number for Excel imports
       let excelInvoiceNumber: string | undefined
@@ -107,14 +108,14 @@ export function useImportExecution() {
             categoryId: selectedCategory ?? p.suggestedCategoryId ?? undefined,
             quantity: p.stockQty || undefined,
           })),
-          invoiceNumber: isInvoiceImport
+          invoiceNumber: isInvoiceImport || isMayoristaPlataImport
             ? invoiceInfo.number ?? undefined
             : isEmailImport
               ? emailInfo.orderNumber ?? undefined
               : isExcelImport
                 ? excelInvoiceNumber
                 : undefined,
-          invoiceDate: isInvoiceImport
+          invoiceDate: isInvoiceImport || isMayoristaPlataImport
             ? invoiceInfo.date ?? undefined
             : isEmailImport
               ? emailInfo.orderDate ?? undefined
@@ -122,18 +123,18 @@ export function useImportExecution() {
                 ? new Date().toISOString().split('T')[0]
                 : undefined,
           supplierId: selectedSupplier ?? undefined,
-          shippingCost: isInvoiceImport
+          shippingCost: isInvoiceImport || isMayoristaPlataImport
             ? invoiceInfo.shippingCost || undefined
             : isEmailImport
               ? emailInfo.shippingCost || undefined
               : isExcelImport
                 ? excelInfo.shippingCost || undefined
                 : undefined,
-          savePdf: isInvoiceImport && !!invoicePdfFile,
+          savePdf: (isInvoiceImport || isMayoristaPlataImport) && !!invoicePdfFile,
           trackingNumber: isEmailImport ? emailInfo.trackingNumber : undefined,
           carrier: isEmailImport ? emailInfo.carrier : undefined,
         },
-        isInvoiceImport ? invoicePdfFile ?? undefined : isExcelImport ? excelFile ?? undefined : undefined
+        isInvoiceImport || isMayoristaPlataImport ? invoicePdfFile ?? undefined : isExcelImport ? excelFile ?? undefined : undefined
       )
 
       const message = labels.import.importedCount

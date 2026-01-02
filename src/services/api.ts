@@ -102,6 +102,8 @@ export const api = {
     update: (id: string, data: UpdateProduct) =>
       request<Product>(`/products/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
     delete: (id: string) => request(`/products/${id}`, { method: 'DELETE' }),
+    checkCodes: (codes: string[]) =>
+      request<{ existing: string[] }>(`/products/check-codes?codes=${encodeURIComponent(codes.join(','))}`),
   },
 
   customers: {

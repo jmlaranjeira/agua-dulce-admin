@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed, watch } from 'vue'
+import { useDebounceFn } from '@vueuse/core'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Checkbox from 'primevue/checkbox'
@@ -11,6 +12,7 @@ import Message from 'primevue/message'
 import { RouterLink } from 'vue-router'
 import ImageThumbnail from '@/components/ImageThumbnail.vue'
 import MarginDialog from './MarginDialog.vue'
+import { api } from '@/services/api'
 import { labels } from '@/locales/es'
 import type { ProductToImport } from '@/types'
 import type { InvoiceInfo, EmailInfo } from '@/composables/useImportExecution'
@@ -34,26 +36,38 @@ const emit = defineEmits<{
 const showMarginDialog = defineModel<boolean>('showMarginDialog', { default: false })
 const customMargin = defineModel<number>('customMargin', { default: 2 })
 
+// State for code validation
+const existingCodesInDb = ref<Set<string>>(new Set())
+
 // Computed
 const selectedProducts = computed(() =>
+  props.products.filter((p) => p.selected)
+)
+
+const selectedNewProducts = computed(() =>
   props.products.filter((p) => p.selected && !p.exists)
+)
+
+const selectedExistingProducts = computed(() =>
+  props.products.filter((p) => p.selected && p.exists)
 )
 
 const selectedCount = computed(() => selectedProducts.value.length)
 
 const allSelected = computed(() =>
-  props.products.filter((p) => !p.exists).every((p) => p.selected)
+  props.products.every((p) => p.selected)
 )
 
 const canProceed = computed(() => {
   if (selectedCount.value === 0) return false
-  return selectedProducts.value.every((p) => p.priceRetail && p.priceRetail > 0)
+  // Only NEW products need retail price, existing products just add stock
+  return selectedNewProducts.value.every((p) => p.priceRetail && p.priceRetail > 0)
 })
 
 // Actions
 function applyMargin(multiplier: number) {
   const updated = props.products.map((p) => {
-    if (p.selected && !p.exists) {
+    if (p.selected) {
       const price = Math.round(p.costPrice * multiplier * 100) / 100
       return { ...p, priceRetail: price, priceWholesale: price }
     }
@@ -70,7 +84,7 @@ function handleCustomMargin(multiplier: number) {
 function toggleSelectAll(checked: boolean) {
   const updated = props.products.map((p) => ({
     ...p,
-    selected: p.exists ? p.selected : checked,
+    selected: checked,
   }))
   emit('update:products', updated)
 }
@@ -83,8 +97,80 @@ function updateProduct(index: number, field: keyof ProductToImport, value: unkno
 }
 
 function rowClass(data: ProductToImport): string {
-  return data.exists ? 'row-disabled' : ''
+  return data.exists ? 'row-existing' : ''
 }
+
+// Code validation functions
+function getDuplicateCodesInBatch(): Set<string> {
+  const codes = props.products.map((p) => p.code)
+  const seen = new Set<string>()
+  const duplicates = new Set<string>()
+  for (const code of codes) {
+    if (code && seen.has(code)) {
+      duplicates.add(code)
+    }
+    if (code) seen.add(code)
+  }
+  return duplicates
+}
+
+function getCodeError(code: string): string | null {
+  if (!code) return null
+  // Existing codes are OK now - they just add stock
+  // Only show error for duplicates within the current batch
+  const duplicates = getDuplicateCodesInBatch()
+  if (duplicates.has(code)) return labels.import.codeDuplicateInBatch
+  return null
+}
+
+function getCodeStatus(code: string): { label: string; severity: 'success' | 'warn' | 'danger' | 'info' } {
+  if (!code) return { label: labels.import.statusNew, severity: 'success' }
+  if (existingCodesInDb.value.has(code)) return { label: labels.import.statusAddStock, severity: 'info' }
+  const duplicates = getDuplicateCodesInBatch()
+  if (duplicates.has(code)) return { label: labels.import.statusDuplicate, severity: 'danger' }
+  return { label: labels.import.statusNew, severity: 'success' }
+}
+
+// Debounced API call to check codes
+const checkCodesDebounced = useDebounceFn(async () => {
+  const codes = props.products.map((p) => p.code).filter(Boolean)
+  if (codes.length === 0) return
+
+  try {
+    const { existing } = await api.products.checkCodes(codes)
+    existingCodesInDb.value = new Set(existing)
+
+    // Update exists property on products - existing products stay selected for stock addition
+    const updated = props.products.map((p) => {
+      const productExists = existing.includes(p.code)
+      return {
+        ...p,
+        exists: productExists,
+        // Keep selected=true for existing products (they add stock)
+        selected: productExists ? true : p.selected,
+      }
+    })
+    emit('update:products', updated)
+  } catch (err) {
+    console.error('Error checking codes:', err)
+  }
+}, 500)
+
+function handleCodeChange(index: number, newCode: string) {
+  updateProduct(index, 'code', newCode)
+  checkCodesDebounced()
+}
+
+// Check codes when products change (initial load)
+watch(
+  () => props.products.length,
+  () => {
+    if (props.products.length > 0) {
+      checkCodesDebounced()
+    }
+  },
+  { immediate: true }
+)
 </script>
 
 <template>
@@ -110,9 +196,15 @@ function rowClass(data: ProductToImport): string {
     </Message>
 
     <div class="configure-header">
-      <span class="selected-info">
-        {{ selectedCount }} {{ labels.import.selected }}
-      </span>
+      <div class="selected-info">
+        <span>{{ selectedCount }} {{ labels.import.selected }}</span>
+        <span v-if="selectedNewProducts.length > 0" class="selection-detail new">
+          {{ selectedNewProducts.length }} {{ labels.import.newProducts }}
+        </span>
+        <span v-if="selectedExistingProducts.length > 0" class="selection-detail existing">
+          {{ selectedExistingProducts.length }} {{ labels.import.stockAddition }}
+        </span>
+      </div>
       <div class="margin-actions">
         <span>{{ labels.import.applyMargin }}:</span>
         <Button label="x2" size="small" severity="secondary" outlined @click="applyMargin(2)" />
@@ -147,7 +239,6 @@ function rowClass(data: ProductToImport): string {
           <Checkbox
             :modelValue="data.selected"
             :binary="true"
-            :disabled="data.exists"
             @update:modelValue="(val) => updateProduct(index, 'selected', val ?? false)"
           />
         </template>
@@ -159,7 +250,21 @@ function rowClass(data: ProductToImport): string {
         </template>
       </Column>
 
-      <Column field="code" :header="labels.fields.code" style="width: 200px" />
+      <Column :header="labels.fields.code" style="width: 200px">
+        <template #body="{ data, index }">
+          <div class="code-cell">
+            <InputText
+              :modelValue="data.code"
+              :class="{ 'p-invalid': getCodeError(data.code) }"
+              class="code-input"
+              @update:modelValue="(val) => handleCodeChange(index, val ?? '')"
+            />
+            <small v-if="getCodeError(data.code)" class="p-error code-error">
+              {{ getCodeError(data.code) }}
+            </small>
+          </div>
+        </template>
+      </Column>
 
       <Column :header="labels.fields.name" style="min-width: 200px">
         <template #body="{ data, index }">
@@ -179,7 +284,6 @@ function rowClass(data: ProductToImport): string {
             mode="currency"
             currency="EUR"
             locale="es-ES"
-            :disabled="data.exists"
             class="price-input"
             @update:modelValue="(val) => updateProduct(index, 'costPrice', val ?? 0)"
           />
@@ -193,8 +297,7 @@ function rowClass(data: ProductToImport): string {
             mode="currency"
             currency="EUR"
             locale="es-ES"
-            :disabled="data.exists"
-            :class="{ 'p-invalid': data.selected && !data.priceRetail }"
+            :class="{ 'p-invalid': data.selected && !data.exists && !data.priceRetail }"
             class="price-input"
             @update:modelValue="(val) => updateProduct(index, 'priceRetail', val)"
           />
@@ -208,18 +311,23 @@ function rowClass(data: ProductToImport): string {
             mode="currency"
             currency="EUR"
             locale="es-ES"
-            :disabled="data.exists"
             class="price-input"
             @update:modelValue="(val) => updateProduct(index, 'priceWholesale', val)"
           />
         </template>
       </Column>
 
+      <Column :header="labels.fields.quantity" style="width: 80px">
+        <template #body="{ data }">
+          <span class="qty-display">{{ data.stockQty || 1 }}</span>
+        </template>
+      </Column>
+
       <Column :header="labels.fields.status" style="width: 110px">
         <template #body="{ data }">
           <Tag
-            :value="data.exists ? labels.import.statusExists : labels.import.statusNew"
-            :severity="data.exists ? 'warn' : 'success'"
+            :value="getCodeStatus(data.code).label"
+            :severity="getCodeStatus(data.code).severity"
           />
         </template>
       </Column>
@@ -285,8 +393,27 @@ function rowClass(data: ProductToImport): string {
 }
 
 .selected-info {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
   font-weight: 600;
   color: var(--color-primary);
+}
+
+.selection-detail {
+  font-size: 0.85em;
+  padding: 0.2em 0.6em;
+  border-radius: 4px;
+}
+
+.selection-detail.new {
+  background-color: var(--p-green-100, #dcfce7);
+  color: var(--p-green-700, #15803d);
+}
+
+.selection-detail.existing {
+  background-color: var(--p-blue-100, #dbeafe);
+  color: var(--p-blue-700, #1d4ed8);
 }
 
 .margin-actions {
@@ -296,16 +423,26 @@ function rowClass(data: ProductToImport): string {
   flex-wrap: wrap;
 }
 
-.products-table :deep(.row-disabled) {
-  opacity: 0.5;
+.products-table :deep(.row-existing) {
+  background-color: var(--p-blue-50, #eff6ff);
 }
 
-.products-table :deep(.row-disabled) td {
-  pointer-events: none;
+.products-table :deep(.row-existing:hover) {
+  background-color: var(--p-blue-100, #dbeafe) !important;
 }
 
-.products-table :deep(.row-disabled) td:first-child {
-  pointer-events: auto;
+.code-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.code-input {
+  width: 100%;
+}
+
+.code-error {
+  font-size: 0.75rem;
 }
 
 .name-input {
@@ -319,6 +456,11 @@ function rowClass(data: ProductToImport): string {
 .price-input :deep(.p-inputnumber-input) {
   width: 100%;
   max-width: 100px;
+}
+
+.qty-display {
+  font-weight: 600;
+  color: var(--color-text);
 }
 
 .load-more-container {
