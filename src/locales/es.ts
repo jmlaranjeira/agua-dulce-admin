@@ -236,7 +236,33 @@ export const labels = {
 
     // Step 1
     selectSource: 'Selecciona el origen de importación',
+    sourceQuestion: '¿De dónde quieres importar?',
+    sourceSubtitle: 'Selecciona el origen de los productos que deseas añadir',
     comingSoon: 'Próximamente',
+
+    // Source metadata
+    sources: {
+      'rainbow-silver': {
+        name: 'Rainbow Silver',
+        description: 'Catálogo web con precios actualizados',
+      },
+      'rainbow-invoice': {
+        name: 'Rainbow Factura',
+        description: 'Importar desde PDF de factura',
+      },
+      'panbubu-email': {
+        name: 'Panbubu Email',
+        description: 'Extraer productos desde email (.eml)',
+      },
+      'excel-supplier': {
+        name: 'Excel de Proveedor',
+        description: 'Subir archivo Excel con productos',
+      },
+      'mayorista-plata': {
+        name: 'Mayorista Plata',
+        description: 'Importar desde PDF de factura',
+      },
+    } as Record<string, { name: string; description: string }>,
 
     // Step 2
     searchText: 'Buscar productos',
