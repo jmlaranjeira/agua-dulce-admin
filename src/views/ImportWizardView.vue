@@ -35,6 +35,7 @@ const {
   isInvoiceSource,
   isEmailSource,
   isExcelSource,
+  isMayoristaPlataSource,
   isFileSource,
   nextStep,
   previousStep,
@@ -106,6 +107,7 @@ const fileSourceType = computed(() => {
   if (isInvoiceSource.value) return 'invoice'
   if (isEmailSource.value) return 'email'
   if (isExcelSource.value) return 'excel'
+  if (isMayoristaPlataSource.value) return 'mayorista-plata'
   return 'invoice'
 })
 

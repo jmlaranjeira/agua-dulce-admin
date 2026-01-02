@@ -442,6 +442,49 @@ export type ExcelPreviewResponse = {
 }
 
 // =============================================
+// Mayorista Plata import types
+// =============================================
+export type MayoristaPlataParsedItem = {
+  lineNumber: number
+  reference: string
+  description: string
+  variant: string | null
+  quantity: number
+  unitPrice: number
+  totalAmount: number
+}
+
+export type MayoristaPlataPreviewItem = {
+  code: string
+  name: string
+  productType: string
+  costPrice: number
+  quantity: number
+  size: string | null
+  exists: boolean
+  suggestedRetailPrice: number
+  suggestedWholesalePrice: number
+  suggestedCategoryId: string | null
+  notes: string
+  parsedData: MayoristaPlataParsedItem
+}
+
+export type MayoristaPlataPreviewResponse = {
+  invoiceNumber: string | null
+  invoiceDate: string | null
+  invoiceExists: boolean
+  existingInvoiceId: string | null
+  items: MayoristaPlataPreviewItem[]
+  suggestedSupplierId: string
+  subtotal: number
+  shippingCost: number
+  summary: {
+    total: number
+    existing: number
+  }
+}
+
+// =============================================
 // Stock types
 // =============================================
 export type StockMovement = {

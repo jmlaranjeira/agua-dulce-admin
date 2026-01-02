@@ -4,6 +4,7 @@ import type {
   InvoicePreviewItem,
   PanbubuPreviewItem,
   ExcelPreviewItem,
+  MayoristaPlataPreviewItem,
 } from '@/types'
 
 /**
@@ -89,6 +90,32 @@ export function mapExcelItemToProduct(item: ExcelPreviewItem): ProductToImport {
     tags: [],
     notes: item.notes,
     imageUrl: item.imageDataUrl || item.imageUrl || '',
+    suggestedCategoryId: item.suggestedCategoryId,
+    exists: item.exists,
+    selected: !item.exists,
+    priceRetail: item.suggestedRetailPrice,
+    priceWholesale: item.suggestedWholesalePrice,
+  }
+}
+
+/**
+ * Maps Mayorista Plata preview item to ProductToImport format
+ */
+export function mapMayoristaPlataItemToProduct(item: MayoristaPlataPreviewItem): ProductToImport {
+  return {
+    externalId: item.code,
+    code: item.code,
+    name: item.name,
+    productType: item.productType,
+    costPriceRaw: item.costPrice,
+    costPrice: item.costPrice,
+    weightGrams: 0,
+    metalType: 'Silver',
+    size: item.size || '',
+    stockQty: item.quantity,
+    tags: [],
+    notes: item.notes,
+    imageUrl: '', // Mayorista Plata no proporciona imágenes automáticamente
     suggestedCategoryId: item.suggestedCategoryId,
     exists: item.exists,
     selected: !item.exists,

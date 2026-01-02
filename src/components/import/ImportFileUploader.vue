@@ -10,11 +10,12 @@ import {
   mapInvoiceItemToProduct,
   mapEmailItemToProduct,
   mapExcelItemToProduct,
+  mapMayoristaPlataItemToProduct,
 } from '@/utils/importMappers'
-import type { ProductToImport, InvoicePreviewResponse, PanbubuPreviewResponse, ExcelPreviewResponse } from '@/types'
+import type { ProductToImport, InvoicePreviewResponse, PanbubuPreviewResponse, ExcelPreviewResponse, MayoristaPlataPreviewResponse } from '@/types'
 import type { InvoiceInfo, EmailInfo, ExcelInfo } from '@/composables/useImportExecution'
 
-type SourceType = 'invoice' | 'email' | 'excel'
+type SourceType = 'invoice' | 'email' | 'excel' | 'mayorista-plata'
 
 interface Props {
   sourceType: SourceType
@@ -70,6 +71,15 @@ const config = computed(() => {
         hint: 'Formatos aceptados: .xlsx, .xls (máx. 10MB)',
         parsingLabel: 'Procesando Excel...',
         supplierRequired: true,
+      }
+    case 'mayorista-plata':
+      return {
+        accept: '.pdf',
+        maxSize: 5000000,
+        chooseLabel: 'Subir factura Mayorista Plata',
+        hint: 'Factura PDF de Mayorista Plata (máx. 5MB)',
+        parsingLabel: 'Procesando factura...',
+        supplierRequired: false,
       }
   }
 })
@@ -193,6 +203,42 @@ async function onFileSelect(event: { files: File[] }) {
         products: response.items.map(mapExcelItemToProduct),
         excelInfo,
         file,
+      })
+    } else if (props.sourceType === 'mayorista-plata') {
+      const response: MayoristaPlataPreviewResponse = await api.import.parseMayoristaPlata(file)
+
+      const invoiceInfo: InvoiceInfo = {
+        number: response.invoiceNumber,
+        date: response.invoiceDate,
+        exists: response.invoiceExists,
+        existingId: response.existingInvoiceId,
+        subtotal: response.subtotal,
+        shippingCost: response.shippingCost,
+      }
+
+      if (response.invoiceExists) {
+        toast.add({
+          severity: 'warn',
+          summary: labels.import.invoiceExists,
+          detail: labels.import.invoiceExistsDetail.replace('{number}', response.invoiceNumber || ''),
+          life: 8000,
+        })
+      }
+
+      const summary = `${response.summary.total} productos encontrados, ${response.summary.existing} ya existen`
+
+      toast.add({
+        severity: 'info',
+        summary: 'Factura procesada',
+        detail: summary,
+        life: 5000,
+      })
+
+      emit('parsed', {
+        products: response.items.map(mapMayoristaPlataItemToProduct),
+        invoiceInfo,
+        file,
+        suggestedSupplierId: response.suggestedSupplierId,
       })
     }
   } catch (err) {

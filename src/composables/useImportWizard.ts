@@ -1,9 +1,9 @@
 import { ref, computed } from 'vue'
 import type { ImportSource, Supplier } from '@/types'
 
-export type ImportSourceId = 'rainbow-silver' | 'rainbow-invoice' | 'panbubu-email' | 'excel-supplier' | 'csv'
+export type ImportSourceId = 'rainbow-silver' | 'rainbow-invoice' | 'panbubu-email' | 'excel-supplier' | 'mayorista-plata' | 'csv'
 
-const FILE_SOURCES: ImportSourceId[] = ['rainbow-invoice', 'panbubu-email', 'excel-supplier']
+const FILE_SOURCES: ImportSourceId[] = ['rainbow-invoice', 'panbubu-email', 'excel-supplier', 'mayorista-plata']
 
 export function useImportWizard() {
   const currentStep = ref(0)
@@ -14,6 +14,7 @@ export function useImportWizard() {
   const isInvoiceSource = computed(() => selectedSource.value?.id === 'rainbow-invoice')
   const isEmailSource = computed(() => selectedSource.value?.id === 'panbubu-email')
   const isExcelSource = computed(() => selectedSource.value?.id === 'excel-supplier')
+  const isMayoristaPlataSource = computed(() => selectedSource.value?.id === 'mayorista-plata')
   const isFileSource = computed(() => FILE_SOURCES.includes(selectedSource.value?.id as ImportSourceId))
 
   const sourceIcon = computed(() => {
@@ -22,6 +23,7 @@ export function useImportWizard() {
       'rainbow-invoice': 'pi pi-file-pdf',
       'panbubu-email': 'pi pi-envelope',
       'excel-supplier': 'pi pi-file-excel',
+      'mayorista-plata': 'pi pi-file-pdf',
     }
     return selectedSource.value ? iconMap[selectedSource.value.id] || 'pi pi-file' : 'pi pi-file'
   })
@@ -66,6 +68,7 @@ export function useImportWizard() {
     isInvoiceSource,
     isEmailSource,
     isExcelSource,
+    isMayoristaPlataSource,
     isFileSource,
     sourceIcon,
     // Actions
