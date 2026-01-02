@@ -168,6 +168,7 @@ export type Order = {
   estimatedDaysMin: number | null
   estimatedDaysMax: number | null
   hasCustomsRisk: boolean
+  needsSupplierOrder: boolean
   status: OrderStatus
   notes: string | null
   items: OrderItem[]

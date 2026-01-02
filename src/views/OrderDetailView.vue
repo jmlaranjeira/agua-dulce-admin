@@ -392,6 +392,10 @@ onMounted(loadOrder)
           <Tag v-if="order.hasCustomsRisk" severity="warn" class="customs-tag">
             {{ labels.shipping.customsWarning }}
           </Tag>
+          <Tag v-if="order.needsSupplierOrder" severity="info" class="supplier-order-tag">
+            <i class="pi pi-box" style="margin-right: 0.25rem"></i>
+            {{ labels.shipping.needsSupplierOrder }}
+          </Tag>
         </div>
       </template>
     </Card>
@@ -656,7 +660,8 @@ onMounted(loadOrder)
   color: #d97706;
 }
 
-.customs-tag {
+.customs-tag,
+.supplier-order-tag {
   margin-top: var(--spacing-sm);
   align-self: flex-start;
 }

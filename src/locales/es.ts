@@ -412,5 +412,6 @@ export const labels = {
     consult: 'Consultar',
     customsWarning: 'Posible trámite de aduanas',
     noZone: 'No especificada',
+    needsSupplierOrder: 'Requiere pedido a proveedor',
   },
 }
