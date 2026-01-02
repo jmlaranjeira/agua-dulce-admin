@@ -186,7 +186,7 @@ function openStockAdjustment() {
 
 function goToStockHistory() {
   if (productId.value) {
-    router.push(`/stock?product=${productId.value}`)
+    router.push(`/stock/movements?product=${productId.value}`)
   }
 }
 
