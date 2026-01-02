@@ -27,6 +27,8 @@ import type {
   MayoristaPlataPreviewResponse,
   StockMovement,
   SupplierOrder,
+  ShippingZone,
+  UpdateShippingZone,
 } from '@/types'
 import { useAuthStore } from '@/stores/auth'
 import router from '@/router'
@@ -392,5 +394,15 @@ export const api = {
     },
     get: (id: string) => request<SupplierOrder>(`/supplier-orders/${id}`),
     delete: (id: string) => request<void>(`/supplier-orders/${id}`, { method: 'DELETE' }),
+  },
+
+  shippingZones: {
+    list: () => request<ShippingZone[]>('/shipping/zones'),
+    get: (id: string) => request<ShippingZone>(`/shipping/zones/${id}`),
+    update: (id: string, data: UpdateShippingZone) =>
+      request<ShippingZone>(`/shipping/zones/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
   },
 }

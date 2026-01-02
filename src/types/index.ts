@@ -60,6 +60,9 @@ export type Supplier = {
   phone: string | null
   url: string | null
   notes: string | null
+  deliveryDaysMin: number | null
+  deliveryDaysMax: number | null
+  isInternational: boolean
   createdAt: string
 }
 
@@ -123,6 +126,34 @@ export type OrderItem = {
   unitPrice: number
 }
 
+// ===========================================
+// Shipping types
+// ===========================================
+export type ShippingZone = {
+  id: string
+  code: string
+  name: string
+  price: number
+  freeAbove: number | null
+  hasCustomsRisk: boolean
+  transitDaysMin: number
+  transitDaysMax: number
+  isActive: boolean
+  sortOrder: number
+  createdAt: string
+}
+
+export type UpdateShippingZone = {
+  name?: string
+  price?: number
+  freeAbove?: number | null
+  hasCustomsRisk?: boolean
+  transitDaysMin?: number
+  transitDaysMax?: number
+  isActive?: boolean
+  sortOrder?: number
+}
+
 export type Order = {
   id: string
   number: string
@@ -130,6 +161,13 @@ export type Order = {
   customer: Customer
   shippingAddressId: string | null
   shippingAddress: CustomerAddress | null
+  shippingZoneId: string | null
+  shippingZone: ShippingZone | null
+  shippingPrice: number
+  shippingWasFree: boolean
+  estimatedDaysMin: number | null
+  estimatedDaysMax: number | null
+  hasCustomsRisk: boolean
   status: OrderStatus
   notes: string | null
   items: OrderItem[]
@@ -166,6 +204,9 @@ export type CreateSupplier = {
   phone?: string
   url?: string
   notes?: string
+  deliveryDaysMin?: number
+  deliveryDaysMax?: number
+  isInternational?: boolean
 }
 
 export type CreateProduct = {

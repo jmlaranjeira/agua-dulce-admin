@@ -365,6 +365,37 @@ onMounted(loadOrder)
       </Card>
     </div>
 
+    <!-- Shipping Info (from store orders) -->
+    <Card v-if="order.shippingZone || order.shippingPrice > 0" class="shipping-info-card">
+      <template #title>
+        {{ labels.shipping.shippingInfo }}
+      </template>
+      <template #content>
+        <div class="shipping-info-content">
+          <div class="info-row">
+            <span class="info-label">{{ labels.shipping.zone }}:</span>
+            <span class="info-value">{{ order.shippingZone?.name || labels.shipping.noZone }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">{{ labels.shipping.shippingCost }}:</span>
+            <span class="info-value" :class="{ 'text-green': order.shippingWasFree }">
+              {{ order.shippingWasFree ? labels.shipping.free : formatCurrency(order.shippingPrice) }}
+            </span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">{{ labels.shipping.estimatedTime }}:</span>
+            <span v-if="order.estimatedDaysMin" class="info-value">
+              {{ order.estimatedDaysMin }}-{{ order.estimatedDaysMax }} {{ labels.shipping.days }}
+            </span>
+            <span v-else class="info-value text-amber">{{ labels.shipping.consult }}</span>
+          </div>
+          <Tag v-if="order.hasCustomsRisk" severity="warn" class="customs-tag">
+            {{ labels.shipping.customsWarning }}
+          </Tag>
+        </div>
+      </template>
+    </Card>
+
     <!-- Order Items -->
     <Card>
       <template #title>
@@ -443,9 +474,21 @@ onMounted(loadOrder)
               {{ formatCurrency(totalMarginAmount!) }} ({{ totalMargin.toFixed(0) }}%)
             </span>
           </div>
+          <div class="total-breakdown" v-if="order.shippingPrice > 0">
+            <div class="subtotal-line">
+              <span>{{ labels.orders.subtotal }}:</span>
+              <span>{{ formatCurrency(total) }}</span>
+            </div>
+            <div class="shipping-line">
+              <span>{{ labels.shipping.shippingCost }}:</span>
+              <span :class="{ 'text-green': order.shippingWasFree }">
+                {{ order.shippingWasFree ? labels.shipping.free : formatCurrency(order.shippingPrice) }}
+              </span>
+            </div>
+          </div>
           <div class="total-amount">
             <span class="total-label">{{ labels.fields.total }}:</span>
-            <span class="total-value">{{ formatCurrency(total) }}</span>
+            <span class="total-value">{{ formatCurrency(total + (order.shippingPrice || 0)) }}</span>
           </div>
         </div>
       </template>
@@ -593,6 +636,31 @@ onMounted(loadOrder)
   margin-top: 0.5rem;
 }
 
+/* Shipping info card */
+.shipping-info-card {
+  margin-top: var(--spacing-lg);
+}
+
+.shipping-info-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.text-green {
+  color: #16a34a;
+  font-weight: 600;
+}
+
+.text-amber {
+  color: #d97706;
+}
+
+.customs-tag {
+  margin-top: var(--spacing-sm);
+  align-self: flex-start;
+}
+
 .items-table {
   margin-bottom: var(--spacing-md);
 }
@@ -670,6 +738,23 @@ onMounted(loadOrder)
   font-weight: 700;
   font-size: 1.5em;
   color: var(--color-primary);
+}
+
+.total-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  padding-right: var(--spacing-lg);
+  border-right: 1px solid var(--color-border);
+}
+
+.subtotal-line,
+.shipping-line {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--spacing-lg);
+  font-size: 0.9em;
+  color: var(--color-text-muted);
 }
 
 .notes-text {

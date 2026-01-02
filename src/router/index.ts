@@ -120,6 +120,13 @@ const router = createRouter({
       name: 'order-detail',
       component: () => import('../views/OrderDetailView.vue'),
     },
+
+    // Configuration
+    {
+      path: '/shipping-zones',
+      name: 'shipping-zones',
+      component: () => import('../views/ShippingZonesView.vue'),
+    },
   ],
 })
 

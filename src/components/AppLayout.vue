@@ -30,6 +30,8 @@ const menuItems: MenuItem[] = [
   { label: labels.menu.suppliers, icon: 'pi pi-truck', route: '/suppliers' },
   { label: labels.menu.invoices, icon: 'pi pi-file', route: '/supplier-orders' },
   { label: labels.menu.import, icon: 'pi pi-cloud-download', route: '/import' },
+  { label: labels.menu.sectionConfig, isSection: true },
+  { label: labels.menu.shippingZones, icon: 'pi pi-map', route: '/shipping-zones' },
 ]
 
 const pageTitleMap: Record<string, string> = {
@@ -50,6 +52,7 @@ const pageTitleMap: Record<string, string> = {
   orders: labels.pages.orders,
   'order-new': labels.pages.orderNew,
   'order-detail': labels.pages.orderDetail,
+  'shipping-zones': labels.pages.shippingZones,
 }
 
 const pageTitle = computed(() => {

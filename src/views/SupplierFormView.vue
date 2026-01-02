@@ -4,6 +4,8 @@ import { useRoute, useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import Card from 'primevue/card'
 import InputText from 'primevue/inputtext'
+import InputNumber from 'primevue/inputnumber'
+import InputSwitch from 'primevue/inputswitch'
 import Textarea from 'primevue/textarea'
 import Button from 'primevue/button'
 import DataTable from 'primevue/datatable'
@@ -21,11 +23,14 @@ const { isMobile } = useBreakpoints()
 const supplierId = computed(() => route.params.id as string | undefined)
 const isEditMode = computed(() => !!supplierId.value)
 
-const form = ref<CreateSupplier>({
+const form = ref<CreateSupplier & { deliveryDaysMin: number | undefined; deliveryDaysMax: number | undefined; isInternational: boolean }>({
   name: '',
   phone: '',
   url: '',
   notes: '',
+  deliveryDaysMin: undefined,
+  deliveryDaysMax: undefined,
+  isInternational: false,
 })
 
 const errors = ref<Record<string, string>>({})
@@ -68,6 +73,9 @@ async function loadSupplier() {
       phone: supplier.phone || '',
       url: supplier.url || '',
       notes: supplier.notes || '',
+      deliveryDaysMin: supplier.deliveryDaysMin ?? undefined,
+      deliveryDaysMax: supplier.deliveryDaysMax ?? undefined,
+      isInternational: supplier.isInternational,
     }
   } catch (err) {
     toast.add({
@@ -110,6 +118,9 @@ async function save() {
       phone: form.value.phone?.trim() || undefined,
       url: form.value.url?.trim() || undefined,
       notes: form.value.notes?.trim() || undefined,
+      deliveryDaysMin: form.value.deliveryDaysMin || undefined,
+      deliveryDaysMax: form.value.deliveryDaysMax || undefined,
+      isInternational: form.value.isInternational,
     }
 
     if (isEditMode.value && supplierId.value) {
@@ -225,6 +236,48 @@ onMounted(() => {
               rows="4"
               autoResize
             />
+          </div>
+
+          <!-- Sección: Tiempos de entrega -->
+          <div class="form-section">
+            <h3 class="section-title">{{ labels.shipping.deliveryTimes }}</h3>
+            <div class="form-row">
+              <div class="form-field">
+                <label for="deliveryDaysMin">{{ labels.shipping.deliveryDaysMin }}</label>
+                <InputNumber
+                  id="deliveryDaysMin"
+                  v-model="form.deliveryDaysMin"
+                  :disabled="loading"
+                  :min="1"
+                  :max="60"
+                />
+                <small class="field-hint">{{ labels.shipping.deliveryDaysMinHint }}</small>
+              </div>
+
+              <div class="form-field">
+                <label for="deliveryDaysMax">{{ labels.shipping.deliveryDaysMax }}</label>
+                <InputNumber
+                  id="deliveryDaysMax"
+                  v-model="form.deliveryDaysMax"
+                  :disabled="loading"
+                  :min="1"
+                  :max="60"
+                />
+                <small class="field-hint">{{ labels.shipping.deliveryDaysMaxHint }}</small>
+              </div>
+            </div>
+
+            <div class="form-field switch-row">
+              <InputSwitch
+                id="isInternational"
+                v-model="form.isInternational"
+                :disabled="loading"
+              />
+              <div class="switch-label">
+                <label for="isInternational">{{ labels.shipping.isInternational }}</label>
+                <small class="field-hint">{{ labels.shipping.isInternationalHint }}</small>
+              </div>
+            </div>
           </div>
 
           <div class="form-actions">
@@ -408,6 +461,42 @@ onMounted(() => {
 
 .p-error {
   color: var(--p-red-500, #ef4444);
+}
+
+/* Form section */
+.form-section {
+  border-top: 1px solid var(--color-border);
+  padding-top: var(--spacing-lg);
+  margin-top: var(--spacing-md);
+}
+
+.section-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0 0 var(--spacing-md) 0;
+}
+
+.field-hint {
+  color: var(--color-text-muted);
+  font-size: 0.85em;
+}
+
+.switch-row {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: var(--spacing-md);
+}
+
+.switch-label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.switch-label label {
+  font-weight: 500;
+  cursor: pointer;
 }
 
 @media (max-width: 768px) {
