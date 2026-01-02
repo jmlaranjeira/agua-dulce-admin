@@ -101,6 +101,7 @@ export const labels = {
     deleteWarning: 'Esta acción no se puede deshacer.',
     savedSuccess: 'Proveedor guardado correctamente',
     deletedSuccess: 'Proveedor eliminado correctamente',
+    supplierData: 'Datos del proveedor',
   },
   customers: {
     newCustomer: 'Nuevo cliente',

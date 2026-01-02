@@ -186,6 +186,9 @@ onMounted(() => {
 <template>
   <div class="supplier-form-view">
     <Card>
+      <template #title>
+        {{ labels.suppliers.supplierData }}
+      </template>
       <template #content>
         <form @submit.prevent="save" class="form">
           <!-- Fila 1: Nombre y Teléfono -->
@@ -486,6 +489,7 @@ onMounted(() => {
   flex-direction: row;
   align-items: flex-start;
   gap: var(--spacing-md);
+  margin-top: var(--spacing-md);
 }
 
 .switch-label {
