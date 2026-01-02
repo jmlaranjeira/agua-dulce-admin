@@ -494,8 +494,9 @@ onMounted(loadData)
 
 .stock-section {
   display: flex;
-  flex-direction: column;
+  align-items: center;
   gap: var(--spacing-md);
+  flex-wrap: wrap;
 }
 
 .stock-display {
@@ -507,6 +508,7 @@ onMounted(loadData)
 .stock-actions {
   display: flex;
   gap: var(--spacing-sm);
+  margin-left: auto;
 }
 
 .stock-warning {
@@ -540,12 +542,18 @@ onMounted(loadData)
     grid-template-columns: 1fr;
   }
 
-  .stock-actions {
+  .stock-section {
     flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .stock-actions {
+    margin-left: 0;
+    width: 100%;
   }
 
   .stock-actions button {
-    width: 100%;
+    flex: 1;
   }
 
   .form-actions {
