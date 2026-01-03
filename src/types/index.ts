@@ -158,6 +158,25 @@ export type UpdateShippingZone = {
   sortOrder?: number
 }
 
+export type ShippingCalculation = {
+  zone: { code: string; name: string } | null
+  shipping: {
+    price: number | null
+    isFree: boolean
+    freeAbove: number | null
+    amountUntilFree: number | null
+  }
+  delivery: {
+    minDays: number | null
+    maxDays: number | null
+    message: string
+  }
+  warnings: Array<{
+    type: 'customs' | 'unknown_zone' | 'international_supplier' | 'out_of_stock'
+    message: string
+  }>
+}
+
 export type Order = {
   id: string
   number: string

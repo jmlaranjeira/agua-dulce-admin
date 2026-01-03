@@ -17,11 +17,12 @@ import Divider from 'primevue/divider'
 import IconField from 'primevue/iconfield'
 import InputIcon from 'primevue/inputicon'
 import ImageThumbnail from '@/components/ImageThumbnail.vue'
+import AddressDialog from '@/components/AddressDialog.vue'
 import { api } from '@/services/api'
 import { labels } from '@/locales/es'
 import { useOrderMargin } from '@/composables/useOrderMargin'
 import { useBreakpoints } from '@/composables/useBreakpoints'
-import type { Customer, Product, CreateOrder, CreateCustomer, Category, CustomerType } from '@/types'
+import type { Customer, Product, CreateOrder, CreateCustomer, Category, CustomerType, CustomerAddress, ShippingCalculation } from '@/types'
 
 type OrderItemForm = {
   product: Product
@@ -59,9 +60,15 @@ const newCustomerForm = ref<CreateCustomer>({
 const savingCustomer = ref(false)
 const customerErrors = ref<Record<string, string>>({})
 
-// TODO: Shipping address - implementar en fase futura
-// const customerAddresses = ref<CustomerAddress[]>([])
-// const selectedShippingAddressId = ref<string | null>(null)
+// Shipping address
+const customerAddresses = ref<CustomerAddress[]>([])
+const selectedShippingAddressId = ref<string | null>(null)
+const loadingAddresses = ref(false)
+const showAddressDialog = ref(false)
+
+// Shipping calculation
+const shippingCalculation = ref<ShippingCalculation | null>(null)
+const loadingShipping = ref(false)
 
 // Product search modal
 const categories = ref<Category[]>([])
@@ -107,6 +114,10 @@ const {
 const totalQuantity = computed(() =>
   orderItems.value.reduce((sum, item) => sum + item.quantity, 0)
 )
+
+const shippingPrice = computed(() => shippingCalculation.value?.shipping.price ?? 0)
+
+const grandTotal = computed(() => total.value + shippingPrice.value)
 
 const categoryOptions = computed(() => [
   { name: labels.products.allCategories, id: null },
@@ -156,7 +167,7 @@ async function loadCategories() {
   }
 }
 
-// Watch customer changes to recalculate prices
+// Watch customer changes to recalculate prices and load addresses
 watch(selectedCustomer, async (newCustomer, oldCustomer) => {
   // Recalculate prices if customer type changed
   if (newCustomer?.type !== oldCustomer?.type) {
@@ -164,7 +175,66 @@ watch(selectedCustomer, async (newCustomer, oldCustomer) => {
       item.unitPrice = getEffectivePrice(item.product)
     })
   }
+
+  // Load customer addresses
+  if (newCustomer) {
+    loadingAddresses.value = true
+    try {
+      customerAddresses.value = await api.customerAddresses.getByCustomer(newCustomer.id)
+      // Auto-select default address
+      const defaultAddress = customerAddresses.value.find((a) => a.isDefault)
+      selectedShippingAddressId.value = defaultAddress?.id || customerAddresses.value[0]?.id || null
+    } catch (err) {
+      console.error('Error loading addresses:', err)
+      customerAddresses.value = []
+      selectedShippingAddressId.value = null
+    } finally {
+      loadingAddresses.value = false
+    }
+  } else {
+    customerAddresses.value = []
+    selectedShippingAddressId.value = null
+  }
 })
+
+async function onAddressSaved() {
+  if (!selectedCustomer.value) return
+
+  const existingIds = new Set(customerAddresses.value.map((a) => a.id))
+  customerAddresses.value = await api.customerAddresses.getByCustomer(selectedCustomer.value.id)
+
+  // Select the newly created address
+  const newAddress = customerAddresses.value.find((a) => !existingIds.has(a.id))
+  if (newAddress) {
+    selectedShippingAddressId.value = newAddress.id
+  }
+}
+
+async function calculateShipping() {
+  const address = customerAddresses.value.find((a) => a.id === selectedShippingAddressId.value)
+  if (!address || total.value === 0) {
+    shippingCalculation.value = null
+    return
+  }
+
+  loadingShipping.value = true
+  try {
+    const productIds = orderItems.value.map((item) => item.product.id)
+    shippingCalculation.value = await api.shippingZones.calculate(
+      address.postalCode,
+      total.value,
+      productIds
+    )
+  } catch (err) {
+    console.error('Error calculating shipping:', err)
+    shippingCalculation.value = null
+  } finally {
+    loadingShipping.value = false
+  }
+}
+
+// Recalculate shipping when address or items change
+watch([selectedShippingAddressId, orderItems], calculateShipping, { deep: true })
 
 function searchProducts(event: { query: string }) {
   const query = event.query.toLowerCase()
@@ -294,6 +364,7 @@ async function createOrder() {
   try {
     const data: CreateOrder = {
       customerId: selectedCustomer.value.id,
+      shippingAddressId: selectedShippingAddressId.value || undefined,
       items: orderItems.value.map((item) => ({
         productId: item.product.id,
         quantity: item.quantity,
@@ -366,7 +437,53 @@ onMounted(() => {
               </small>
             </div>
 
-            <!-- TODO: Implementar gestión de direcciones de envío en fase futura -->
+            <div class="form-section" v-if="selectedCustomer">
+              <label>{{ labels.address.shippingAddress }}</label>
+              <div class="address-row">
+                <Select
+                  v-model="selectedShippingAddressId"
+                  :options="customerAddresses"
+                  optionLabel="label"
+                  optionValue="id"
+                  :placeholder="customerAddresses.length ? labels.address.selectAddress : labels.address.noAddresses"
+                  :disabled="loadingAddresses || customerAddresses.length === 0"
+                  :loading="loadingAddresses"
+                  class="address-select"
+                  appendTo="body"
+                >
+                  <template #option="{ option }">
+                    <div class="address-option">
+                      <div class="address-option-label">
+                        <span>{{ option.label }}</span>
+                        <Tag v-if="option.isDefault" severity="info" size="small">{{ labels.address.isDefault }}</Tag>
+                      </div>
+                      <span class="address-option-detail">
+                        {{ option.street }}, {{ option.city }} {{ option.postalCode }}
+                      </span>
+                    </div>
+                  </template>
+                  <template #value="{ value }">
+                    <span v-if="value">
+                      {{ customerAddresses.find(a => a.id === value)?.label || '' }}
+                    </span>
+                    <span v-else class="text-muted">
+                      {{ customerAddresses.length ? labels.address.selectAddress : labels.address.noAddresses }}
+                    </span>
+                  </template>
+                </Select>
+                <Button
+                  icon="pi pi-plus"
+                  severity="secondary"
+                  outlined
+                  v-tooltip.top="labels.address.add"
+                  @click="showAddressDialog = true"
+                />
+              </div>
+              <small v-if="customerAddresses.length === 0 && !loadingAddresses" class="no-address-hint">
+                <i class="pi pi-info-circle"></i>
+                {{ labels.address.addAddressHint }}
+              </small>
+            </div>
           </div>
 
           <!-- Fila 2: Productos (ancho completo) -->
@@ -560,20 +677,20 @@ onMounted(() => {
             </div>
 
             <div class="summary-card">
-              <div class="summary-title">Resumen</div>
+              <div class="summary-title">{{ labels.orders.summary }}</div>
 
               <div class="summary-row">
-                <span class="summary-label">Productos:</span>
+                <span class="summary-label">{{ labels.orders.products }}:</span>
                 <span>{{ orderItems.length }} items</span>
               </div>
 
               <div class="summary-row">
-                <span class="summary-label">Unidades:</span>
+                <span class="summary-label">{{ labels.orders.units }}:</span>
                 <span>{{ totalQuantity }}</span>
               </div>
 
               <div v-if="totalMargin !== null" class="summary-row">
-                <span class="summary-label">Margen:</span>
+                <span class="summary-label">{{ labels.orders.margin }}:</span>
                 <span class="margin-badge" :class="getTotalMarginClass()">
                   {{ formatCurrency(totalMarginAmount!) }} ({{ totalMargin.toFixed(0) }}%)
                 </span>
@@ -581,9 +698,45 @@ onMounted(() => {
 
               <Divider />
 
+              <div class="summary-row">
+                <span class="summary-label">{{ labels.orders.subtotal }}:</span>
+                <span>{{ formatCurrency(total) }}</span>
+              </div>
+
+              <div class="summary-row">
+                <span class="summary-label">{{ labels.orders.shipping }}:</span>
+                <span v-if="loadingShipping" class="text-muted">
+                  <i class="pi pi-spin pi-spinner"></i>
+                </span>
+                <span v-else-if="shippingCalculation?.shipping.price === null" class="text-muted">
+                  {{ labels.orders.shippingConsult }}
+                </span>
+                <span v-else-if="shippingCalculation?.shipping.isFree" class="shipping-free">
+                  {{ labels.orders.shippingFree }}
+                </span>
+                <span v-else-if="shippingCalculation">
+                  {{ formatCurrency(shippingCalculation.shipping.price!) }}
+                </span>
+                <span v-else class="text-muted">-</span>
+              </div>
+
+              <div v-if="shippingCalculation?.delivery.message" class="shipping-delivery-info">
+                <i class="pi pi-truck"></i>
+                {{ shippingCalculation.delivery.message }}
+              </div>
+
+              <div v-if="shippingCalculation?.warnings.length" class="shipping-warnings">
+                <div v-for="warning in shippingCalculation.warnings" :key="warning.type" class="shipping-warning">
+                  <i class="pi pi-exclamation-triangle"></i>
+                  {{ warning.message }}
+                </div>
+              </div>
+
+              <Divider />
+
               <div class="summary-total">
                 <span>Total:</span>
-                <span class="summary-total-value">{{ formatCurrency(total) }}</span>
+                <span class="summary-total-value">{{ formatCurrency(grandTotal) }}</span>
               </div>
             </div>
           </div>
@@ -749,6 +902,14 @@ onMounted(() => {
         </Column>
       </DataTable>
     </Dialog>
+
+    <!-- Address Dialog -->
+    <AddressDialog
+      v-if="selectedCustomer"
+      v-model="showAddressDialog"
+      :customer-id="selectedCustomer.id"
+      @saved="onAddressSaved"
+    />
   </div>
 </template>
 
@@ -790,6 +951,16 @@ onMounted(() => {
   flex: 1;
 }
 
+.address-row {
+  display: flex;
+  gap: var(--spacing-sm);
+  align-items: center;
+}
+
+.address-select {
+  flex: 1;
+}
+
 .wholesale-hint {
   display: flex;
   align-items: center;
@@ -799,6 +970,18 @@ onMounted(() => {
 }
 
 .wholesale-hint i {
+  font-size: 0.75rem;
+}
+
+.no-address-hint {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--color-text-muted);
+  margin-top: 0.25rem;
+}
+
+.no-address-hint i {
   font-size: 0.75rem;
 }
 
@@ -1022,6 +1205,41 @@ onMounted(() => {
   color: var(--color-primary);
 }
 
+.shipping-free {
+  color: var(--p-green-600, #16a34a);
+  font-weight: 600;
+}
+
+.shipping-delivery-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  margin-top: 0.25rem;
+}
+
+.shipping-delivery-info i {
+  font-size: 0.75rem;
+}
+
+.shipping-warnings {
+  margin-top: 0.5rem;
+}
+
+.shipping-warning {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--p-orange-600, #ea580c);
+  margin-bottom: 0.25rem;
+}
+
+.shipping-warning i {
+  font-size: 0.75rem;
+}
+
 .form-actions {
   display: flex;
   justify-content: flex-end;
@@ -1199,6 +1417,15 @@ onMounted(() => {
   }
 
   .customer-select {
+    width: 100%;
+  }
+
+  .address-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .address-select {
     width: 100%;
   }
 

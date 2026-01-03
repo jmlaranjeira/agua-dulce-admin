@@ -29,6 +29,7 @@ import type {
   SupplierOrder,
   ShippingZone,
   UpdateShippingZone,
+  ShippingCalculation,
 } from '@/types'
 import { useAuthStore } from '@/stores/auth'
 import router from '@/router'
@@ -411,5 +412,15 @@ export const api = {
         method: 'PATCH',
         body: JSON.stringify(data),
       }),
+    calculate: (postalCode: string, subtotal: number, productIds?: string[]) => {
+      const params = new URLSearchParams({
+        zip: postalCode,
+        subtotal: subtotal.toString(),
+      })
+      if (productIds?.length) {
+        params.set('productIds', productIds.join(','))
+      }
+      return request<ShippingCalculation>(`/public/shipping/calculate?${params}`)
+    },
   },
 }
