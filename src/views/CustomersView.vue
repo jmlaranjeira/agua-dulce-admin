@@ -236,7 +236,7 @@ onMounted(loadCustomers)
             </template>
           </Column>
 
-          <Column field="notes" :header="labels.fields.notes" class="hidden-tablet">
+          <Column field="notes" :header="labels.fields.notes" style="max-width: 200px" class="hidden-tablet">
             <template #body="{ data }">
               <span :title="data.notes || ''" v-tooltip.top="data.notes">
                 {{ truncateNotes(data.notes) }}
