@@ -102,6 +102,7 @@ export const labels = {
     savedSuccess: 'Proveedor guardado correctamente',
     deletedSuccess: 'Proveedor eliminado correctamente',
     supplierData: 'Datos del proveedor',
+    allSuppliers: 'Todos los proveedores',
   },
   customers: {
     newCustomer: 'Nuevo cliente',
