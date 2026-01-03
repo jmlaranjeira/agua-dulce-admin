@@ -50,26 +50,26 @@ const mobileMenuItems = computed(() => {
     {
       label: labels.actions.edit,
       icon: 'pi pi-pencil',
-      command: () => selectedSupplier.value && goToEdit(selectedSupplier.value.id),
+      command: () => { if (selectedSupplier.value) goToEdit(selectedSupplier.value.id) },
     },
   ]
   if (selectedSupplier.value?.isActive) {
     items.push({
       label: 'Archivar',
       icon: 'pi pi-inbox',
-      command: () => selectedSupplier.value && confirmArchive(selectedSupplier.value),
+      command: () => { if (selectedSupplier.value) confirmArchive(selectedSupplier.value) },
     })
   } else {
     items.push(
       {
         label: 'Restaurar',
         icon: 'pi pi-replay',
-        command: () => selectedSupplier.value && restoreSupplier(selectedSupplier.value),
+        command: () => { if (selectedSupplier.value) restoreSupplier(selectedSupplier.value) },
       },
       {
         label: 'Eliminar',
         icon: 'pi pi-trash',
-        command: () => selectedSupplier.value && confirmDelete(selectedSupplier.value),
+        command: () => { if (selectedSupplier.value) confirmDelete(selectedSupplier.value) },
       },
     )
   }
