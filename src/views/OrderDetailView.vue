@@ -492,7 +492,7 @@ onMounted(loadOrder)
           </div>
           <div class="total-amount">
             <span class="total-label">{{ labels.fields.total }}:</span>
-            <span class="total-value">{{ formatCurrency(total + (order.shippingPrice || 0)) }}</span>
+            <span class="total-value">{{ formatCurrency(total + Number(order.shippingPrice || 0)) }}</span>
           </div>
         </div>
       </template>
