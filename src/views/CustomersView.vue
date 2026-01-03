@@ -214,11 +214,11 @@ onMounted(loadCustomers)
             </div>
           </template>
 
-          <Column field="name" :header="labels.fields.name" sortable />
+          <Column field="name" :header="labels.fields.name" sortable style="width: 180px" />
 
-          <Column field="phone" :header="labels.fields.phone" />
+          <Column field="phone" :header="labels.fields.phone" style="width: 130px" />
 
-          <Column field="type" :header="labels.fields.type" style="width: 120px">
+          <Column field="type" :header="labels.fields.type" style="width: 100px">
             <template #body="{ data }">
               <Tag
                 :value="labels.customerType[data.type as keyof typeof labels.customerType]"
@@ -227,7 +227,7 @@ onMounted(loadCustomers)
             </template>
           </Column>
 
-          <Column header="Estado" style="width: 100px">
+          <Column header="Estado" style="width: 90px">
             <template #body="{ data }">
               <Tag
                 :value="data.isActive ? 'Activo' : 'Archivado'"

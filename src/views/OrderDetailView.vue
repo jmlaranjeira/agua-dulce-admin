@@ -332,11 +332,10 @@ onMounted(loadOrder)
         </template>
         <template #content>
           <div class="customer-info">
-            <div class="info-row">
+            <div class="info-grid">
               <span class="info-label">{{ labels.fields.name }}:</span>
               <span class="info-value">{{ order.customer.name }}</span>
-            </div>
-            <div class="info-row">
+
               <span class="info-label">{{ labels.fields.phone }}:</span>
               <a :href="`tel:${order.customer.phone}`" class="phone-link">
                 {{ order.customer.phone }}
@@ -372,30 +371,30 @@ onMounted(loadOrder)
       </template>
       <template #content>
         <div class="shipping-info-content">
-          <div class="info-row">
+          <div class="info-grid">
             <span class="info-label">{{ labels.shipping.zone }}:</span>
             <span class="info-value">{{ order.shippingZone?.name || labels.shipping.noZone }}</span>
-          </div>
-          <div class="info-row">
+
             <span class="info-label">{{ labels.shipping.shippingCost }}:</span>
             <span class="info-value" :class="{ 'text-green': order.shippingWasFree }">
               {{ order.shippingWasFree ? labels.shipping.free : formatCurrency(order.shippingPrice) }}
             </span>
-          </div>
-          <div class="info-row">
+
             <span class="info-label">{{ labels.shipping.estimatedTime }}:</span>
             <span v-if="order.estimatedDaysMin" class="info-value">
               {{ order.estimatedDaysMin }}-{{ order.estimatedDaysMax }} {{ labels.shipping.days }}
             </span>
             <span v-else class="info-value text-amber">{{ labels.shipping.consult }}</span>
           </div>
-          <Tag v-if="order.hasCustomsRisk" severity="warn" class="customs-tag">
-            {{ labels.shipping.customsWarning }}
-          </Tag>
-          <Tag v-if="order.needsSupplierOrder" severity="info" class="supplier-order-tag">
-            <i class="pi pi-box" style="margin-right: 0.25rem"></i>
-            {{ labels.shipping.needsSupplierOrder }}
-          </Tag>
+          <div class="shipping-tags">
+            <Tag v-if="order.hasCustomsRisk" severity="warn">
+              {{ labels.shipping.customsWarning }}
+            </Tag>
+            <Tag v-if="order.needsSupplierOrder" severity="info">
+              <i class="pi pi-box" style="margin-right: 0.25rem"></i>
+              {{ labels.shipping.needsSupplierOrder }}
+            </Tag>
+          </div>
         </div>
       </template>
     </Card>
@@ -601,15 +600,10 @@ onMounted(loadOrder)
   gap: var(--spacing-sm);
 }
 
-.info-row {
-  display: flex;
-  gap: var(--spacing-md);
-}
-
 .info-label {
   font-weight: 500;
   color: var(--color-text-muted);
-  min-width: 80px;
+  white-space: nowrap;
 }
 
 .info-value {
@@ -648,7 +642,20 @@ onMounted(loadOrder)
 .shipping-info-content {
   display: flex;
   flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--spacing-sm) var(--spacing-lg);
+  align-items: baseline;
+}
+
+.shipping-tags {
+  display: flex;
   gap: var(--spacing-sm);
+  flex-wrap: wrap;
 }
 
 .text-green {
@@ -658,12 +665,6 @@ onMounted(loadOrder)
 
 .text-amber {
   color: #d97706;
-}
-
-.customs-tag,
-.supplier-order-tag {
-  margin-top: var(--spacing-sm);
-  align-self: flex-start;
 }
 
 .items-table {

@@ -162,6 +162,7 @@ export type Order = {
   customer: Customer
   shippingAddressId: string | null
   shippingAddress: CustomerAddress | null
+  shippingCity: string | null
   shippingZoneId: string | null
   shippingZone: ShippingZone | null
   shippingPrice: number

@@ -220,31 +220,25 @@ onMounted(() => {
             </div>
           </template>
 
-          <Column field="number" :header="labels.orders.orderNumber" sortable style="width: 100px">
+          <Column field="number" :header="labels.orders.orderNumber" sortable style="width: 120px">
             <template #body="{ data }">
               <span class="order-number">{{ data.number }}</span>
             </template>
           </Column>
 
-          <Column field="customer.name" :header="labels.fields.customer">
-            <template #body="{ data }">
-              {{ data.customer.name }}
-            </template>
-          </Column>
-
-          <Column field="createdAt" :header="labels.fields.date" sortable style="width: 120px" class="hidden-tablet">
+          <Column field="createdAt" :header="labels.fields.date" sortable style="width: 100px">
             <template #body="{ data }">
               {{ formatDate(data.createdAt) }}
             </template>
           </Column>
 
-          <Column field="total" :header="labels.fields.total" style="width: 110px">
+          <Column field="customer.name" :header="labels.fields.customer" style="width: 140px">
             <template #body="{ data }">
-              {{ formatCurrency(calculateTotal(data)) }}
+              {{ data.customer.name }}
             </template>
           </Column>
 
-          <Column field="status" :header="labels.fields.status" style="width: 120px">
+          <Column field="status" :header="labels.fields.status" style="width: 110px">
             <template #body="{ data }">
               <Tag
                 :value="labels.status[data.status as keyof typeof labels.status]"
@@ -253,7 +247,27 @@ onMounted(() => {
             </template>
           </Column>
 
-          <Column :header="labels.fields.actions" style="width: 80px">
+          <Column header="Ciudad" style="width: 120px" class="hidden-tablet">
+            <template #body="{ data }">
+              {{ data.shippingCity || data.shippingAddress?.city || '-' }}
+            </template>
+          </Column>
+
+          <Column header="Envío" style="width: 80px" class="hidden-tablet">
+            <template #body="{ data }">
+              <span :class="{ 'text-green-600': data.shippingWasFree }">
+                {{ data.shippingWasFree ? 'Gratis' : formatCurrency(data.shippingPrice) }}
+              </span>
+            </template>
+          </Column>
+
+          <Column field="total" :header="labels.fields.total" style="width: 90px">
+            <template #body="{ data }">
+              {{ formatCurrency(calculateTotal(data)) }}
+            </template>
+          </Column>
+
+          <Column :header="labels.fields.actions" style="width: 60px">
             <template #body="{ data }">
               <div class="actions">
                 <Button
