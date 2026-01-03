@@ -214,11 +214,11 @@ onMounted(loadCustomers)
             </div>
           </template>
 
-          <Column field="name" :header="labels.fields.name" sortable style="width: 180px" />
+          <Column field="name" :header="labels.fields.name" sortable />
 
-          <Column field="phone" :header="labels.fields.phone" style="width: 130px" />
+          <Column field="phone" :header="labels.fields.phone" />
 
-          <Column field="type" :header="labels.fields.type" style="width: 100px">
+          <Column field="type" :header="labels.fields.type">
             <template #body="{ data }">
               <Tag
                 :value="labels.customerType[data.type as keyof typeof labels.customerType]"
@@ -227,7 +227,7 @@ onMounted(loadCustomers)
             </template>
           </Column>
 
-          <Column header="Estado" style="width: 90px">
+          <Column header="Estado">
             <template #body="{ data }">
               <Tag
                 :value="data.isActive ? 'Activo' : 'Archivado'"
@@ -236,7 +236,7 @@ onMounted(loadCustomers)
             </template>
           </Column>
 
-          <Column field="notes" :header="labels.fields.notes" style="max-width: 200px" class="hidden-tablet">
+          <Column field="notes" :header="labels.fields.notes" class="hidden-tablet">
             <template #body="{ data }">
               <span :title="data.notes || ''" v-tooltip.top="data.notes">
                 {{ truncateNotes(data.notes) }}
@@ -244,7 +244,7 @@ onMounted(loadCustomers)
             </template>
           </Column>
 
-          <Column :header="labels.fields.actions" style="width: 120px">
+          <Column :header="labels.fields.actions">
             <template #body="{ data }">
               <div class="actions">
                 <Button
