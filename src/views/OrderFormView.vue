@@ -22,7 +22,7 @@ import { api } from '@/services/api'
 import { labels } from '@/locales/es'
 import { useOrderMargin } from '@/composables/useOrderMargin'
 import { useBreakpoints } from '@/composables/useBreakpoints'
-import type { Customer, Product, CreateOrder, CreateCustomer, Category, CustomerType, CustomerAddress, ShippingCalculation } from '@/types'
+import type { Customer, Product, CreateOrder, CreateCustomer, Category, CustomerType, CustomerAddress, ShippingCalculation, Supplier } from '@/types'
 
 type OrderItemForm = {
   product: Product
@@ -72,9 +72,11 @@ const loadingShipping = ref(false)
 
 // Product search modal
 const categories = ref<Category[]>([])
+const suppliers = ref<Supplier[]>([])
 const showProductModal = ref(false)
 const modalSearchQuery = ref('')
 const modalCategoryFilter = ref<string | null>(null)
+const modalSupplierFilter = ref<string | null>(null)
 
 const customerOptions = computed(() =>
   customers.value.map((c) => ({
@@ -124,6 +126,11 @@ const categoryOptions = computed(() => [
   ...[...categories.value].sort((a, b) => a.order - b.order),
 ])
 
+const supplierOptions = computed(() => [
+  { name: labels.suppliers.allSuppliers, id: null },
+  ...[...suppliers.value].sort((a, b) => a.name.localeCompare(b.name)),
+])
+
 const filteredModalProducts = computed(() => {
   let result = products.value
 
@@ -138,6 +145,10 @@ const filteredModalProducts = computed(() => {
 
   if (modalCategoryFilter.value) {
     result = result.filter((p) => p.categoryId === modalCategoryFilter.value)
+  }
+
+  if (modalSupplierFilter.value) {
+    result = result.filter((p) => p.supplierId === modalSupplierFilter.value)
   }
 
   return result
@@ -164,6 +175,14 @@ async function loadCategories() {
     categories.value = await api.categories.list()
   } catch (err) {
     console.error('Error loading categories:', err)
+  }
+}
+
+async function loadSuppliers() {
+  try {
+    suppliers.value = await api.suppliers.list()
+  } catch (err) {
+    console.error('Error loading suppliers:', err)
   }
 }
 
@@ -282,6 +301,7 @@ function addProductFromModal(product: Product) {
   showProductModal.value = false
   modalSearchQuery.value = ''
   modalCategoryFilter.value = null
+  modalSupplierFilter.value = null
 }
 
 function removeItem(index: number) {
@@ -400,6 +420,7 @@ onMounted(() => {
   loadCustomers()
   loadProducts()
   loadCategories()
+  loadSuppliers()
 })
 </script>
 
@@ -833,7 +854,7 @@ onMounted(() => {
       v-model:visible="showProductModal"
       header="Buscar Producto"
       modal
-      :style="{ width: '90vw', maxWidth: '800px' }"
+      :style="{ width: '95vw', maxWidth: '1100px' }"
       class="product-search-modal"
     >
       <div class="modal-filters">
@@ -841,7 +862,7 @@ onMounted(() => {
           <InputIcon class="pi pi-search" />
           <InputText
             v-model="modalSearchQuery"
-            placeholder="Buscar por nombre o código..."
+            :placeholder="labels.orders.selectProduct"
             class="w-full"
           />
         </IconField>
@@ -851,33 +872,48 @@ onMounted(() => {
           optionLabel="name"
           optionValue="id"
           :placeholder="labels.products.allCategories"
-          class="modal-category-filter"
+          class="modal-filter-select"
+        />
+        <Select
+          v-model="modalSupplierFilter"
+          :options="supplierOptions"
+          optionLabel="name"
+          optionValue="id"
+          :placeholder="labels.suppliers.allSuppliers"
+          class="modal-filter-select"
         />
       </div>
 
       <DataTable
         :value="filteredModalProducts"
         paginator
-        :rows="5"
+        :rows="8"
         class="modal-products-table"
         scrollable
-        scrollHeight="400px"
+        scrollHeight="450px"
       >
         <template #empty>
           <div class="empty-message">{{ labels.messages.noResults }}</div>
         </template>
 
-        <Column header="" style="width: 60px">
+        <Column header="" class="col-image">
           <template #body="{ data }">
             <ImageThumbnail :src="data.imageUrl" :size="40" :preview-size="150" />
           </template>
         </Column>
 
-        <Column field="code" header="Código" style="width: 100px" />
+        <Column field="code" :header="labels.fields.code" class="col-code" />
 
-        <Column field="name" header="Nombre" />
+        <Column field="name" :header="labels.fields.name" class="col-name" />
 
-        <Column header="Precio" style="width: 120px">
+        <Column :header="labels.fields.supplier" class="col-supplier">
+          <template #body="{ data }">
+            <span v-if="data.supplier" class="supplier-name">{{ data.supplier.name }}</span>
+            <span v-else class="text-muted">-</span>
+          </template>
+        </Column>
+
+        <Column :header="labels.fields.price" class="col-price">
           <template #body="{ data }">
             <div class="modal-price-cell">
               <span :class="{ 'price-strikethrough': hasWholesalePrice(data) }">
@@ -890,11 +926,11 @@ onMounted(() => {
           </template>
         </Column>
 
-        <Column header="" style="width: 100px">
+        <Column header="" class="col-action">
           <template #body="{ data }">
             <Button
               icon="pi pi-plus"
-              label="Añadir"
+              :label="labels.orders.addProduct"
               size="small"
               @click="addProductFromModal(data)"
             />
@@ -1300,22 +1336,56 @@ onMounted(() => {
   display: flex;
   gap: var(--spacing-md);
   margin-bottom: var(--spacing-lg);
+  flex-wrap: wrap;
 }
 
 .modal-search {
   flex: 1;
+  min-width: 200px;
 }
 
 .modal-search :deep(input) {
   width: 100%;
 }
 
-.modal-category-filter {
-  min-width: 200px;
+.modal-filter-select {
+  min-width: 180px;
 }
 
 .modal-products-table {
   margin-top: var(--spacing-sm);
+}
+
+/* Modal table columns with flex */
+.modal-products-table :deep(.col-image) {
+  flex: 0 0 60px;
+}
+
+.modal-products-table :deep(.col-code) {
+  flex: 0 0 100px;
+}
+
+.modal-products-table :deep(.col-name) {
+  flex: 2;
+  min-width: 150px;
+}
+
+.modal-products-table :deep(.col-supplier) {
+  flex: 1;
+  min-width: 120px;
+}
+
+.modal-products-table :deep(.col-price) {
+  flex: 0 0 110px;
+}
+
+.modal-products-table :deep(.col-action) {
+  flex: 0 0 100px;
+}
+
+.supplier-name {
+  font-size: 0.9em;
+  color: var(--color-text-muted);
 }
 
 .empty-message {
@@ -1451,8 +1521,16 @@ onMounted(() => {
     flex-direction: column;
   }
 
-  .modal-category-filter {
+  .modal-filter-select {
     width: 100%;
+  }
+
+  .modal-products-table :deep(.col-supplier) {
+    display: none;
+  }
+
+  .modal-products-table :deep(.col-code) {
+    display: none;
   }
 
   .summary-card {
