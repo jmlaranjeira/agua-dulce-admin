@@ -132,6 +132,38 @@ async function restoreCustomer(customer: Customer) {
   }
 }
 
+function confirmDelete(customer: Customer) {
+  confirm.require({
+    message: `¿Eliminar permanentemente "${customer.name}"? Esta acción no se puede deshacer.`,
+    header: 'Eliminar cliente',
+    icon: 'pi pi-exclamation-triangle',
+    acceptLabel: 'Eliminar',
+    rejectLabel: 'Cancelar',
+    acceptClass: 'p-button-danger',
+    accept: () => deleteCustomer(customer),
+  })
+}
+
+async function deleteCustomer(customer: Customer) {
+  try {
+    await api.customers.delete(customer.id)
+    toast.add({
+      severity: 'success',
+      summary: 'OK',
+      detail: 'Cliente eliminado permanentemente',
+      life: 3000,
+    })
+    loadCustomers()
+  } catch (err) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: err instanceof Error ? err.message : labels.messages.errorGeneric,
+      life: 3000,
+    })
+  }
+}
+
 onMounted(loadCustomers)
 </script>
 
@@ -231,15 +263,24 @@ onMounted(loadCustomers)
                   v-tooltip.top="'Archivar'"
                   @click.stop="confirmArchive(data)"
                 />
-                <Button
-                  v-else
-                  icon="pi pi-replay"
-                  text
-                  rounded
-                  severity="success"
-                  v-tooltip.top="'Restaurar'"
-                  @click.stop="restoreCustomer(data)"
-                />
+                <template v-else>
+                  <Button
+                    icon="pi pi-replay"
+                    text
+                    rounded
+                    severity="success"
+                    v-tooltip.top="'Restaurar'"
+                    @click.stop="restoreCustomer(data)"
+                  />
+                  <Button
+                    icon="pi pi-trash"
+                    text
+                    rounded
+                    severity="danger"
+                    v-tooltip.top="'Eliminar'"
+                    @click.stop="confirmDelete(data)"
+                  />
+                </template>
               </div>
             </template>
           </Column>
@@ -284,15 +325,24 @@ onMounted(loadCustomers)
                 severity="warn"
                 @click.stop="confirmArchive(customer)"
               />
-              <Button
-                v-else
-                icon="pi pi-replay"
-                text
-                rounded
-                size="small"
-                severity="success"
-                @click.stop="restoreCustomer(customer)"
-              />
+              <template v-else>
+                <Button
+                  icon="pi pi-replay"
+                  text
+                  rounded
+                  size="small"
+                  severity="success"
+                  @click.stop="restoreCustomer(customer)"
+                />
+                <Button
+                  icon="pi pi-trash"
+                  text
+                  rounded
+                  size="small"
+                  severity="danger"
+                  @click.stop="confirmDelete(customer)"
+                />
+              </template>
               <Button
                 icon="pi pi-chevron-right"
                 text

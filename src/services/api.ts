@@ -78,13 +78,20 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 
 export const api = {
   suppliers: {
-    list: () => request<Supplier[]>('/suppliers'),
+    list: (filters?: { active?: boolean }) => {
+      const params = new URLSearchParams()
+      if (filters?.active !== undefined) params.set('active', String(filters.active))
+      const query = params.toString()
+      return request<Supplier[]>(`/suppliers${query ? `?${query}` : ''}`)
+    },
     get: (id: string) => request<Supplier>(`/suppliers/${id}`),
     products: (id: string) => request<Product[]>(`/suppliers/${id}/products`),
     create: (data: CreateSupplier) =>
       request<Supplier>('/suppliers', { method: 'POST', body: JSON.stringify(data) }),
     update: (id: string, data: UpdateSupplier) =>
       request<Supplier>(`/suppliers/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    archive: (id: string) => request<Supplier>(`/suppliers/${id}/archive`, { method: 'PATCH' }),
+    restore: (id: string) => request<Supplier>(`/suppliers/${id}/restore`, { method: 'PATCH' }),
     delete: (id: string) => request(`/suppliers/${id}`, { method: 'DELETE' }),
   },
 

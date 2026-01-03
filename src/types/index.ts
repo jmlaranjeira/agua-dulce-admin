@@ -63,6 +63,7 @@ export type Supplier = {
   deliveryDaysMin: number | null
   deliveryDaysMax: number | null
   isInternational: boolean
+  isActive: boolean
   createdAt: string
 }
 

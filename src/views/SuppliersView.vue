@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
@@ -10,6 +10,7 @@ import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import IconField from 'primevue/iconfield'
 import InputIcon from 'primevue/inputicon'
+import Select from 'primevue/select'
 import Menu from 'primevue/menu'
 import { api } from '@/services/api'
 import { labels } from '@/locales/es'
@@ -24,8 +25,15 @@ const { isMobile } = useBreakpoints()
 const suppliers = ref<Supplier[]>([])
 const loading = ref(true)
 const searchQuery = ref('')
+const statusFilter = ref<'all' | 'active' | 'archived'>('active')
 const mobileMenu = ref()
 const selectedSupplier = ref<Supplier | null>(null)
+
+const statusOptions = [
+  { value: 'all', label: 'Todos' },
+  { value: 'active', label: 'Activos' },
+  { value: 'archived', label: 'Archivados' },
+]
 
 const filteredSuppliers = computed(() => {
   if (!searchQuery.value) return suppliers.value
@@ -37,24 +45,43 @@ const filteredSuppliers = computed(() => {
   )
 })
 
-const mobileMenuItems = computed(() => [
-  {
-    label: labels.actions.edit,
-    icon: 'pi pi-pencil',
-    command: () => selectedSupplier.value && goToEdit(selectedSupplier.value.id),
-  },
-  {
-    label: labels.actions.delete,
-    icon: 'pi pi-trash',
-    class: 'text-red-500',
-    command: () => selectedSupplier.value && confirmDelete(selectedSupplier.value),
-  },
-])
+const mobileMenuItems = computed(() => {
+  const items = [
+    {
+      label: labels.actions.edit,
+      icon: 'pi pi-pencil',
+      command: () => selectedSupplier.value && goToEdit(selectedSupplier.value.id),
+    },
+  ]
+  if (selectedSupplier.value?.isActive) {
+    items.push({
+      label: 'Archivar',
+      icon: 'pi pi-inbox',
+      command: () => selectedSupplier.value && confirmArchive(selectedSupplier.value),
+    })
+  } else {
+    items.push(
+      {
+        label: 'Restaurar',
+        icon: 'pi pi-replay',
+        command: () => selectedSupplier.value && restoreSupplier(selectedSupplier.value),
+      },
+      {
+        label: 'Eliminar',
+        icon: 'pi pi-trash',
+        command: () => selectedSupplier.value && confirmDelete(selectedSupplier.value),
+      },
+    )
+  }
+  return items
+})
 
 async function loadSuppliers() {
   loading.value = true
   try {
-    suppliers.value = await api.suppliers.list()
+    const activeFilter =
+      statusFilter.value === 'all' ? undefined : statusFilter.value === 'active'
+    suppliers.value = await api.suppliers.list({ active: activeFilter })
   } catch (err) {
     toast.add({
       severity: 'error',
@@ -67,6 +94,8 @@ async function loadSuppliers() {
   }
 }
 
+watch(statusFilter, loadSuppliers)
+
 function goToNew() {
   router.push('/suppliers/new')
 }
@@ -75,26 +104,80 @@ function goToEdit(id: string) {
   router.push(`/suppliers/${id}/edit`)
 }
 
-function confirmDelete(supplier: Supplier) {
+function confirmArchive(supplier: Supplier) {
   confirm.require({
-    message: labels.suppliers.confirmDelete,
-    header: labels.actions.delete,
+    message: `¿Estás seguro de que quieres archivar "${supplier.name}"?`,
+    header: 'Archivar proveedor',
     icon: 'pi pi-exclamation-triangle',
-    acceptClass: 'p-button-danger',
-    accept: () => deleteSupplier(supplier.id),
+    acceptLabel: 'Archivar',
+    rejectLabel: 'Cancelar',
+    acceptClass: 'p-button-warning',
+    accept: () => archiveSupplier(supplier),
   })
 }
 
-async function deleteSupplier(id: string) {
+async function archiveSupplier(supplier: Supplier) {
   try {
-    await api.suppliers.delete(id)
-    suppliers.value = suppliers.value.filter((s) => s.id !== id)
+    await api.suppliers.archive(supplier.id)
     toast.add({
       severity: 'success',
       summary: 'OK',
-      detail: labels.suppliers.deletedSuccess,
+      detail: 'Proveedor archivado correctamente',
       life: 3000,
     })
+    loadSuppliers()
+  } catch (err) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: err instanceof Error ? err.message : labels.messages.errorGeneric,
+      life: 3000,
+    })
+  }
+}
+
+async function restoreSupplier(supplier: Supplier) {
+  try {
+    await api.suppliers.restore(supplier.id)
+    toast.add({
+      severity: 'success',
+      summary: 'OK',
+      detail: 'Proveedor restaurado correctamente',
+      life: 3000,
+    })
+    loadSuppliers()
+  } catch (err) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: err instanceof Error ? err.message : labels.messages.errorGeneric,
+      life: 3000,
+    })
+  }
+}
+
+function confirmDelete(supplier: Supplier) {
+  confirm.require({
+    message: `¿Eliminar permanentemente "${supplier.name}"? Esta acción no se puede deshacer.`,
+    header: 'Eliminar proveedor',
+    icon: 'pi pi-exclamation-triangle',
+    acceptLabel: 'Eliminar',
+    rejectLabel: 'Cancelar',
+    acceptClass: 'p-button-danger',
+    accept: () => deleteSupplier(supplier),
+  })
+}
+
+async function deleteSupplier(supplier: Supplier) {
+  try {
+    await api.suppliers.delete(supplier.id)
+    toast.add({
+      severity: 'success',
+      summary: 'OK',
+      detail: 'Proveedor eliminado permanentemente',
+      life: 3000,
+    })
+    loadSuppliers()
   } catch (err) {
     toast.add({
       severity: 'error',
@@ -124,13 +207,22 @@ onMounted(loadSuppliers)
 <template>
   <div class="suppliers-view">
     <div class="view-header">
-      <IconField class="search-box">
-        <InputIcon class="pi pi-search" />
-        <InputText
-          v-model="searchQuery"
-          :placeholder="labels.actions.search"
+      <div class="header-filters">
+        <IconField class="search-box">
+          <InputIcon class="pi pi-search" />
+          <InputText
+            v-model="searchQuery"
+            :placeholder="labels.actions.search"
+          />
+        </IconField>
+        <Select
+          v-model="statusFilter"
+          :options="statusOptions"
+          optionLabel="label"
+          optionValue="value"
+          class="status-filter"
         />
-      </IconField>
+      </div>
       <Button
         :label="isMobile ? undefined : labels.suppliers.newSupplier"
         icon="pi pi-plus"
@@ -151,6 +243,7 @@ onMounted(loadSuppliers)
           rowHover
           scrollable
           class="suppliers-table"
+          @row-click="(e) => goToEdit(e.data.id)"
         >
           <template #empty>
             <div class="empty-message">
@@ -190,16 +283,35 @@ onMounted(loadSuppliers)
                   text
                   rounded
                   v-tooltip.top="labels.actions.edit"
-                  @click="goToEdit(data.id)"
+                  @click.stop="goToEdit(data.id)"
                 />
                 <Button
-                  icon="pi pi-trash"
+                  v-if="data.isActive"
+                  icon="pi pi-inbox"
                   text
                   rounded
-                  severity="danger"
-                  v-tooltip.top="labels.actions.delete"
-                  @click="confirmDelete(data)"
+                  severity="warn"
+                  v-tooltip.top="'Archivar'"
+                  @click.stop="confirmArchive(data)"
                 />
+                <template v-else>
+                  <Button
+                    icon="pi pi-replay"
+                    text
+                    rounded
+                    severity="success"
+                    v-tooltip.top="'Restaurar'"
+                    @click.stop="restoreSupplier(data)"
+                  />
+                  <Button
+                    icon="pi pi-trash"
+                    text
+                    rounded
+                    severity="danger"
+                    v-tooltip.top="'Eliminar'"
+                    @click.stop="confirmDelete(data)"
+                  />
+                </template>
               </div>
             </template>
           </Column>
@@ -268,9 +380,20 @@ onMounted(loadSuppliers)
   gap: var(--spacing-md);
 }
 
+.header-filters {
+  display: flex;
+  gap: var(--spacing-md);
+  align-items: center;
+  flex: 1;
+}
+
 .search-box {
   flex: 1;
   max-width: 300px;
+}
+
+.status-filter {
+  min-width: 140px;
 }
 
 .search-box :deep(input) {
@@ -299,6 +422,10 @@ onMounted(loadSuppliers)
 
 .suppliers-table :deep(.p-datatable-tbody > tr > td) {
   padding: 0.875rem 1.25rem;
+}
+
+.suppliers-table :deep(.p-datatable-tbody > tr) {
+  cursor: pointer;
 }
 
 .suppliers-table :deep(.p-datatable-tbody > tr:hover) {
@@ -406,12 +533,17 @@ onMounted(loadSuppliers)
 }
 
 @media (max-width: 768px) {
-  .view-header {
-    flex-direction: row;
+  .header-filters {
+    flex-direction: column;
+    gap: var(--spacing-sm);
   }
 
   .search-box {
     max-width: none;
+  }
+
+  .status-filter {
+    width: 100%;
   }
 }
 </style>
