@@ -275,7 +275,22 @@ onMounted(loadSuppliers)
             </template>
           </Column>
 
-          <Column :header="labels.fields.actions" style="width: 120px">
+          <Column header="Facturas" class="hidden-tablet">
+            <template #body="{ data }">
+              {{ data._count?.orders || 0 }}
+            </template>
+          </Column>
+
+          <Column header="Entrega" class="hidden-tablet">
+            <template #body="{ data }">
+              <span v-if="data.deliveryDaysMin && data.deliveryDaysMax">
+                {{ data.deliveryDaysMin }}-{{ data.deliveryDaysMax }} días
+              </span>
+              <span v-else>-</span>
+            </template>
+          </Column>
+
+          <Column :header="labels.fields.actions">
             <template #body="{ data }">
               <div class="actions">
                 <Button

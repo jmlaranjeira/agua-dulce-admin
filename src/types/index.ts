@@ -65,6 +65,9 @@ export type Supplier = {
   isInternational: boolean
   isActive: boolean
   createdAt: string
+  _count?: {
+    orders: number
+  }
 }
 
 export type Category = {
